@@ -10,6 +10,14 @@ class Settings(BaseModel):
     timeout: float
     default_timeout: float
 
+    @property
+    def baseUrl(self) -> str:
+        return self.base_url
+
+    @property
+    def llmModel(self) -> str:
+        return self.ai_model
+
     @classmethod
     def from_env(cls) -> "Settings":
         baseUrl = os.getenv("BASE_URL")

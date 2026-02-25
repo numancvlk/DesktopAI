@@ -35,7 +35,7 @@ def build_messages(history: List[dict], user_input: str) -> List[Dict[str, str]]
     return messages
 
 
-def call(history: List[dict], user_input: str) -> str: ? #Json yanitini döner
+def call(history: List[dict], user_input: str) -> str:  # Json yanitini döner
     settings = get_settings()
     baseUrl = settings.baseUrl.rstrip("/")
     model = settings.llmModel
