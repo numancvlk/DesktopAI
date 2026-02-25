@@ -2,7 +2,6 @@
 import os
 import re
 import subprocess
-import psutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 

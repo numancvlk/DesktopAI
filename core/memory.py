@@ -1,17 +1,19 @@
-#LIBRARIES
+# LIBRARIES
 import datetime
-import os
 import sqlite3
 from pathlib import Path
 from typing import List
 
-def get_db_path() -> str: #Veittabnani yol
-    pathFromEnv = os.getenv("MEMORY_DB_PATH")
-    if pathFromEnv and pathFromEnv.strip():
-        return pathFromEnv.strip()
+from .config import get_settings
+
+
+def get_db_path() -> str:
+    return get_settings().memory_db_path
+
 
 def init_db() -> None:
     dbPath = get_db_path()
+    Path(dbPath).parent.mkdir(parents=True, exist_ok=True)
     try:
         conn = sqlite3.connect(dbPath)
         conn.execute(
@@ -30,7 +32,7 @@ def init_db() -> None:
         raise RuntimeError("Database error")
 
 
-def get_last_messages(limit: int = 5) -> List[dict]: #Onceki mesajlari alir
+def get_last_messages(limit: int = 5) -> List[dict]:
     dbPath = get_db_path()
     try:
         conn = sqlite3.connect(dbPath)
@@ -55,7 +57,7 @@ def get_last_messages(limit: int = 5) -> List[dict]: #Onceki mesajlari alir
         return []
 
 
-def append_message(role: str, content: str) -> None: #Mesajlari ekler
+def append_message(role: str, content: str) -> None:
     dbPath = get_db_path()
     createdAt = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     try:

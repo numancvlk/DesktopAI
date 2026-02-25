@@ -50,10 +50,11 @@ def call(history: List[dict], user_input: str) -> str:  # Json yanitini döner
     try:
         response = requests.post(url, json=payload, timeout=timeout)
         response.raise_for_status()
-        data: Dict[str, Any] = response.json()
+        data = response.json()
     except:
-        raise RuntimeError("Baglanti hatasi")
-    except:
+        raise RuntimeError("LLM yaniti gecersiz")
+
+    if not isinstance(data, dict):
         raise RuntimeError("LLM yaniti gecersiz")
 
     message = data.get("message")

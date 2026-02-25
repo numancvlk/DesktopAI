@@ -60,10 +60,10 @@ class MainScreen(QMainWindow): #ANA PENCERE
         self.sendButton.setEnabled(False)
         self.statusLabel.setText("Düşünüyor...")
         self.worker = LLMWorker(text)
-        self.worker.started_processing.connect(self.on_started)
-        self.worker.new_message_ready.connect(self.on_message_ready)
-        self.worker.error_occurred.connect(self.on_error)
-        self.worker.finished_processing.connect(self.on_finished)
+        self.worker.startedProcessing.connect(self.on_started)
+        self.worker.newMessage.connect(self.on_message_ready)
+        self.worker.errorOccured.connect(self.on_error)
+        self.worker.finishedProcessing.connect(self.on_finished)
         self.worker.start()
 
     def on_started(self): #Worker basladiginda

@@ -14,7 +14,6 @@ class IntentModel(BaseModel):
 
     class Config:
         extra = "ignore"
-        allow_mutation = True
 
     @validator("intent", "command", "response", pre=True)
     def strip_strings(cls, value: Any) -> Any:

@@ -1,15 +1,13 @@
-from __future__ import annotations
-
+#LBIRARIES
 import json
 import re
 from typing import Any, Dict, Iterable, Mapping
-
 from pydantic import ValidationError
-
 from .intent import IntentModel
 
 
 class IntentParserError(Exception):
+    pass
 
 class IntentParser: #LLM den geleni IntentModel'e dönüştürür.
 
