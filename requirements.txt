@@ -2,3 +2,5 @@ requests
 pydantic
 PySide6
 python-dotenv
+pyautogui
+pyperclip

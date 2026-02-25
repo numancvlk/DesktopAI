@@ -25,19 +25,20 @@ class LLMWorker(QThread): #LLM Worker
             validator = SecurityValidator()
             normalized = validator.validate(intent)
 
+            exec_ok = True
             try:
                 executor = SafeExecutor()
                 executor.execute(normalized.command, normalized.parameters)
-
-            except RuntimeError:
-                pass
+            except RuntimeError as e:
+                exec_ok = False
+                self.errorOccured.emit(str(e))
 
             memory.append_message("user", self.userInput)
             memory.append_message("assistant", normalized.response)
             self.newMessage.emit(normalized.response)
 
         except IntentParserError as exc:
-            self.errorOccured.emit("Yanıt işlenemedi.")
+            self.errorOccured.emit(str(exc))
 
         except RuntimeError as exc:
             self.errorOccured.emit(str(exc))

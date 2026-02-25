@@ -10,7 +10,7 @@ class IntentModel(BaseModel):
     intent: str = Field(default="")
     command: str = Field(default="none")
     parameters: Dict[str, Any] = Field(default_factory=dict)
-    response: str
+    response: str = Field(default="")
 
     class Config:
         extra = "ignore"

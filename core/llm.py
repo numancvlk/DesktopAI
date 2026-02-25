@@ -4,22 +4,17 @@ import requests
 from typing import Any, Dict, List
 from .config import get_settings
 
-def build_system_prompt() -> str: #LLM PROMPT
-    return """Sen masaüstü asistanısın. Yanıtını MUTLAKA yalnızca aşağıdaki JSON formatında ver. Başka metin, açıklama veya markdown yazma.
+def build_system_prompt() -> str:
+    return """Sen masaüstü asistanısın. Yanıtın SADECE tek JSON nesnesi olsun, başka metin yazma.
 
-            Format (İngilizce anahtarlar):
-            {"intent": "...", "command": "...", "parameters": {}, "response": "..."}
+    Format: {"intent": "...", "command": "...", "parameters": {}, "response": "..."}
 
-            Kurallar:
-            - intent: Kullanıcı niyetini kısa özetle (Türkçe veya İngilizce).
-            - command: Sadece "none" veya "open_app" kullan.
-            - parameters: open_app ise {"app_name": "uygulama adı"} şeklinde; değilse {}.
-            - response: Kullanıcıya gösterilecek tek cümlelik Türkçe yanıt. Sadece düz metin: markdown, **kalın**, # başlık, emoji veya []() kullanma. Ses çıktısına uygun olsun.
+    ZORUNLU KURAL - Aç komutu: Kullanıcı mesajında "ac", "aç", "open", "açı" veya açmak anlamı varsa MUTLAKA command: "open_app" ver, app_name olarak uygulama adını yaz. ASLA "ne yapmamı istiyorsun?" diye sorma.
+    - hesap makinesi ac -> command: "open_app", parameters: {"app_name": "hesap makinesi"}, response: "Hesap makinesini açıyorum."
 
-            ÖNEMLİ - Eksik eylem kuralı: Kullanıcı sadece bir isim yazdıysa (örn. "hesap makinesi") ve ne yapılacağını söylemediyse:
-            - command: "none"
-            - parameters: {}
-            - response: İsmi kullanarak sor: "hesap makinesi ile ne yapmamı istiyorsun? Açmamı mı?" gibi. Kendin eylem başlatma."""
+    Sadece eksik eylem: Kullanıcı SADECE uygulama adı yazdı, "ac/aç/open" YOK (örn. sadece "hesap makinesi") -> command: "none", parameters: {}, response: "[Uygulama] ile ne yapmamı istiyorsun? Açmamı mı?"
+
+    response: Her zaman tek cümle Türkçe, düz metin (markdown/emoji yok)."""
 
 
 def build_messages(history: List[dict], user_input: str) -> List[Dict[str, str]]: #Eski mesajlarla yeni mesajlari birleştirir
@@ -46,12 +41,15 @@ def call(history: List[dict], user_input: str) -> str:  # Json yanitini döner
         "model": model,
         "messages": build_messages(history, user_input),
         "stream": False,
+        "format": "json",
     }
     try:
         response = requests.post(url, json=payload, timeout=timeout)
         response.raise_for_status()
         data = response.json()
-    except:
+    except requests.RequestException:
+        raise RuntimeError("Baglanti hatasi")
+    except (ValueError, TypeError, KeyError):
         raise RuntimeError("LLM yaniti gecersiz")
 
     if not isinstance(data, dict):

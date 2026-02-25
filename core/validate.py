@@ -1,42 +1,102 @@
-#LBIRARIES
+# LIBRARIES
 import json
 import re
 from typing import Any, Dict, Iterable, Mapping
 from pydantic import ValidationError
 from .intent import IntentModel
 
-
 class IntentParserError(Exception):
     pass
 
-class IntentParser: #LLM den geleni IntentModel'e dönüştürür.
+def fix_json_string(s: str) -> str:
+    s = re.sub(r",\s*}", "}", s)
+    s = re.sub(r",\s*]", "]", s)
+    return s
 
+
+def extract_json_from_string(text: str) -> Dict[str, Any]:
+    text = (text or "").strip()
+
+    if not text:
+        raise IntentParserError("LLM yanıtı boş")
+
+    for candidate in (text, fix_json_string(text)):
+
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            pass
+
+    cleaned = re.sub(r"^```(?:json)?\s*", "", text)
+    cleaned = re.sub(r"\s*```\s*$", "", cleaned).strip()
+
+    for candidate in (cleaned, fix_json_string(cleaned)):
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            pass
+
+    start = text.find("{")
+
+    if start < 0:
+        raise IntentParserError("LLM yanıtı geçersiz")
+
+    depth = 0
+
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                chunk = text[start : i + 1]
+                for candidate in (chunk, fix_json_string(chunk)):
+                    try:
+                        return json.loads(candidate)
+                    except json.JSONDecodeError:
+                        pass
+                break
+
+    end = text.rfind("}")
+
+    if end > start:
+        chunk = text[start : end + 1]
+
+        for candidate in (chunk, fix_json_string(chunk)):
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                pass
+    raise IntentParserError("LLM yanıtı geçersiz")
+
+
+class IntentParser:
     def parse(self, raw_payload: Any) -> IntentModel:
-        data: Dict[str, Any]
 
         if isinstance(raw_payload, str):
-            try:
-                data = json.loads(raw_payload)
-            except json.JSONDecodeError as exc:
-                raise IntentParserError("LLM yanıtı geçersiz") from exc
+            data = extract_json_from_string(raw_payload)
+
         elif isinstance(raw_payload, Mapping):
             data = dict(raw_payload)
-        else:
-            raise IntentParserError("Intent parsing desteklenmiyor")
 
-        if "intent" not in data:
-            data["intent"] = ""
-        if "command" not in data:
-            data["command"] = "none"
-        if "parameters" not in data or data["parameters"] is None:
-            data["parameters"] = {}
-        if "response" not in data:
-            data["response"] = ""
+        else:
+            raise IntentParserError("Intent parsing yanlis")
+
+        if not isinstance(data, dict):
+            raise IntentParserError("LLM yanıtı geçersiz")
+
+        data["intent"] = str(data.get("intent") or "").strip()
+        cmd = str(data.get("command") or "none").strip().lower()
+        data["command"] = cmd if cmd in ("none", "open_app") else "none"
+        params = data.get("parameters")
+        data["parameters"] = dict(params) if isinstance(params, dict) else {}
+        rawResponse = data.get("response")
+        data["response"] = str(rawResponse).strip() if rawResponse is not None else ""
 
         try:
             return IntentModel(**data)
-        except ValidationError as exc:
-            raise IntentParserError("LLM IntentParseri dogru doldurmuyooo") from exc
+        except ValidationError:
+            raise IntentParserError("LLM yanıtı geçersiz")
 
 
 class SecurityValidator:
