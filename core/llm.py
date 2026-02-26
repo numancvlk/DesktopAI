@@ -12,7 +12,9 @@ def build_system_prompt() -> str:
     ZORUNLU KURAL - Aç komutu: Kullanıcı mesajında "ac", "aç", "open", "açı" veya açmak anlamı varsa MUTLAKA command: "open_app" ver, app_name olarak uygulama adını yaz. ASLA "ne yapmamı istiyorsun?" diye sorma.
     - hesap makinesi ac -> command: "open_app", parameters: {"app_name": "hesap makinesi"}, response: "Hesap makinesini açıyorum."
 
-    Sadece eksik eylem: Kullanıcı SADECE uygulama adı yazdı, "ac/aç/open" YOK (örn. sadece "hesap makinesi") -> command: "none", parameters: {}, response: "[Uygulama] ile ne yapmamı istiyorsun? Açmamı mı?"
+    ZORUNLU KURAL - Ekran görüntüsü (ÖNCELİKLİ): "screenshot", "screencapture", "screen capture", "ekran goruntusu", "ekran görüntüsü", "ekrani kaydet", "ekranı kaydet", "ekran al", "ekran goster" gibi ifadeler ASLA uygulama adı değildir. Bu durumda MUTLAKA command: "screenshot", parameters: {}, response: "Ekran görüntüsünü alıp masaüstüne kaydettim." ver. Bu isteklerde ASLA "ne yapmamı istiyorsun?" veya "Açmamı mı?" deme.
+
+    Sadece eksik eylem: Kullanıcı SADECE bir uygulama adı yazdı (yukarıdaki ekran görüntüsü ifadeleri HARİÇ), "ac/aç/open" YOK (örn. sadece "hesap makinesi") -> command: "none", parameters: {}, response: "[Uygulama] ile ne yapmamı istiyorsun? Açmamı mı?"
 
     response: Her zaman tek cümle Türkçe, düz metin (markdown/emoji yok)."""
 

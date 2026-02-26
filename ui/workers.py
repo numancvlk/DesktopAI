@@ -25,17 +25,20 @@ class LLMWorker(QThread): #LLM Worker
             validator = SecurityValidator()
             normalized = validator.validate(intent)
 
-            exec_ok = True
+            execOk = True
+            displayResponse = normalized.response
             try:
                 executor = SafeExecutor()
-                executor.execute(normalized.command, normalized.parameters)
+                result = executor.execute(normalized.command, normalized.parameters)
+                if result and isinstance(result, str):
+                    displayResponse = f"{normalized.response} Dosya: {result}"
             except RuntimeError as e:
-                exec_ok = False
+                execOk = False
                 self.errorOccured.emit(str(e))
 
             memory.append_message("user", self.userInput)
-            memory.append_message("assistant", normalized.response)
-            self.newMessage.emit(normalized.response)
+            memory.append_message("assistant", displayResponse)
+            self.newMessage.emit(displayResponse)
 
         except IntentParserError as exc:
             self.errorOccured.emit(str(exc))

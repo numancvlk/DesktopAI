@@ -10,6 +10,7 @@ class Settings(BaseModel):
     timeout: float
     default_timeout: float
     memory_db_path: str
+    screenshot_save_dir: str
 
     @property
     def baseUrl(self) -> str:
@@ -26,6 +27,7 @@ class Settings(BaseModel):
         timeout = os.getenv("TIMEOUT")
         defaultTimeout = os.getenv("DEFAULT_TIMEOUT")
         memoryDbPath = os.getenv("MEMORY_DB_PATH")
+        screenshotSaveDir = os.getenv("SCREENSHOT_SAVE_DIR")
 
         if not memoryDbPath or not memoryDbPath.strip():
             raise RuntimeError("MEMORY_DB_PATH eksik veya boş")
@@ -37,6 +39,10 @@ class Settings(BaseModel):
 
         if llmModel is None or not llmModel.strip():
             raise RuntimeError("AI_MODEL eksik veya boş")
+
+        if not screenshotSaveDir or not screenshotSaveDir.strip():
+            raise RuntimeError("SCREENSHOT_SAVE_DIR eksik veya boş")
+        screenshotSaveDir = screenshotSaveDir.strip()
 
         try:
             timeout = float(timeout) if timeout is not None else 0.0
@@ -59,6 +65,7 @@ class Settings(BaseModel):
                 timeout=timeout,
                 default_timeout=defaultTimeout,
                 memory_db_path=memoryDbPath,
+                screenshot_save_dir=screenshotSaveDir,
             )
         except ValidationError as exc:
             raise RuntimeError("Geçersiz env değerleri") from exc
