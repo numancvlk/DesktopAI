@@ -1,5 +1,6 @@
 #LIBRARIES
 from PySide6.QtCore import QThread, Signal
+from voice.stt import record_audio, transcribe_audio
 
 
 class VoiceListenWorker(QThread): #STT Worker
@@ -10,7 +11,12 @@ class VoiceListenWorker(QThread): #STT Worker
         super().__init__(parent)
 
     def run(self):
-        raise NotImplementedError("Ses dinleme etkin degil")
+        try:
+            audioPath = record_audio()
+            transcript = transcribe_audio(audioPath)
+            self.transcriptReady.emit(transcript)
+        except Exception as exc:
+            self.errorOccured.emit(str(exc))
 
 
 class VoiceSpeakWorker(QThread): # TTS Worker

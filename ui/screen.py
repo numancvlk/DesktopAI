@@ -12,12 +12,14 @@ from PySide6.QtWidgets import (
     QFrame,
 )
 from ui.workers import LLMWorker
+from ui.voice_workers import VoiceListenWorker
 
 
 class MainScreen(QMainWindow): #ANA PENCERE
     def __init__(self, parent=None):
         super().__init__(parent)
         self.worker = None
+        self.voiceWorker = None
         self.build_ui()
 
     def build_ui(self): #UI BILESENLERI
@@ -43,6 +45,10 @@ class MainScreen(QMainWindow): #ANA PENCERE
         self.sendButton = QPushButton("Gönder")
         self.sendButton.clicked.connect(self.on_send_clicked)
         row.addWidget(self.sendButton)
+
+        self.voiceButton = QPushButton("Ses")
+        self.voiceButton.clicked.connect(self.on_voice_clicked)
+        row.addWidget(self.voiceButton)
         layout.addLayout(row)
 
         self.setWindowTitle("Desktop Assistant")
@@ -79,3 +85,35 @@ class MainScreen(QMainWindow): #ANA PENCERE
         self.statusLabel.setText("")
         self.sendButton.setEnabled(True)
         self.worker = None
+
+    def on_voice_clicked(self): #Sesle mesaj gonderme
+        if self.voiceWorker is not None:
+            return
+
+        self.voiceButton.setEnabled(False)
+        self.statusLabel.setText("Dinliyor...")
+
+        self.voiceWorker = VoiceListenWorker()
+        self.voiceWorker.transcriptReady.connect(self.on_voice_transcript_ready)
+        self.voiceWorker.errorOccured.connect(self.on_voice_error)
+        self.voiceWorker.finished.connect(self.on_voice_finished)
+        self.voiceWorker.start()
+
+    def on_voice_transcript_ready(self, text: str):
+        if not text:
+            self.statusLabel.setText("")
+            self.voiceButton.setEnabled(True)
+            return
+
+        self.inputLine.setText(text)
+        self.on_send_clicked()
+
+    def on_voice_error(self, message: str):
+        self.chatArea.append(
+            f"<span style='color: red;'><b>Ses Hatası:</b> {message}</span>"
+        )
+
+    def on_voice_finished(self):
+        self.statusLabel.setText("")
+        self.voiceButton.setEnabled(True)
+        self.voiceWorker = None
