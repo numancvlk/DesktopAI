@@ -7,3 +7,5 @@ pyperclip
 faster-whisper
 sounddevice
 numpy
+pypdf
+chromadb

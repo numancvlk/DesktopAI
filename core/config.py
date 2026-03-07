@@ -1,4 +1,4 @@
-# LIBRARIES
+# LIBRARIES * CONFIG BURDAN GELIR BIZI MDEGERLER
 import os
 from pathlib import Path
 from typing import Optional
@@ -17,6 +17,10 @@ class Settings(BaseModel):
     stt_compute_type: str
     stt_sample_rate: int
     stt_record_seconds: float
+    rag_enabled: bool
+    rag_pdf_dir: str
+    rag_embedding_model: str
+    rag_top_k: int
 
     @property
     def baseUrl(self) -> str:
@@ -40,6 +44,10 @@ class Settings(BaseModel):
         sttComputeType = os.getenv("STT_COMPUTE_TYPE")
         sttSampleRate = os.getenv("STT_SAMPLE_RATE")
         sttRecordSeconds = os.getenv("STT_RECORD_SECONDS")
+        ragEnabledRaw = os.getenv("RAG_ENABLED")
+        ragPdfDir = os.getenv("RAG_PDF_DIR")
+        ragEmbeddingModel = os.getenv("RAG_EMBEDDING_MODEL")
+        ragTopK = os.getenv("RAG_TOP_K")
 
         if not memoryDbPath or not memoryDbPath.strip():
             raise RuntimeError("MEMORY_DB_PATH eksik veya boş")
@@ -72,15 +80,27 @@ class Settings(BaseModel):
 
         try:
             sttBeamSizeInt = int(sttBeamSize)
-        except:
+        except Exception:
             raise RuntimeError("STT_BEAM_SIZE geçerli bir tam sayı olmalıdır")
 
         try:
             sttSampleRateInt = int(sttSampleRate)
-        except:
+        except Exception:
             raise RuntimeError(
                 "STT_SAMPLE_RATE geçerli bir tam sayı olmalıdır"
-            ) 
+            )
+
+        try:
+            ragTopKInt = int(ragTopK)
+        except Exception:
+            raise RuntimeError("RAG_TOP_K geçerli bir tam sayı olmalıdır")
+
+        ragEnabled = str(ragEnabledRaw).strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
 
         try:
             return cls(
@@ -95,9 +115,13 @@ class Settings(BaseModel):
                 stt_beam_size=sttBeamSizeInt,
                 stt_compute_type=sttComputeType.strip(),
                 stt_sample_rate=sttSampleRateInt,
-                stt_record_seconds=sttRecordSeconds,
+                stt_record_seconds=float(sttRecordSeconds) if sttRecordSeconds is not None else 0.0,
+                rag_enabled=ragEnabled,
+                rag_pdf_dir=ragPdfDir.strip(),
+                rag_embedding_model=ragEmbeddingModel.strip(),
+                rag_top_k=ragTopKInt,
             )
-        except:
+        except Exception:
             raise RuntimeError("Geçersiz env değerleri")
 
 cachedSettings: Optional[Settings] = None
