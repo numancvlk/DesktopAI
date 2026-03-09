@@ -49,7 +49,7 @@ class LLMWorker(QThread): #LLM Worker
             if forcedIntent is not None:
                 command = forcedIntent["command"]
                 parameters = forcedIntent["parameters"]
-                displayResponse = forcedIntent["response"]
+                displayResponse = forcedIntent.get("response") or "Tamam."
             else:
                 enrichedInput = self.userInput
                 rawJson = llm.call(history, enrichedInput)
@@ -59,7 +59,7 @@ class LLMWorker(QThread): #LLM Worker
                 normalized = validator.validate(intent)
                 command = normalized.command
                 parameters = normalized.parameters
-                displayResponse = normalized.response
+                displayResponse = normalized.response or "Anladım, devam edelim."
 
 
             try:

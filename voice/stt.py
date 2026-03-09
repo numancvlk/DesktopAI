@@ -2,12 +2,14 @@
 import os
 import tempfile
 import wave
+import numpy as np
 import sounddevice as sd
 
 from pathlib import Path
 from typing import Optional
 from faster_whisper import WhisperModel
 from core.config import get_settings
+from core.local_intents import normalize_spoken_command
 
 stt_model: Optional[WhisperModel] = None
 
@@ -35,23 +37,58 @@ def record_audio(duration_seconds: float | None = None) -> str:
     if effectiveDuration <= 0:
         raise ValueError("Recording süresi hatasi")
 
-    sd.default.samplerate = sampleRate
-    sd.default.channels = 1
+    blockDurationSec = 0.2
+    blockFrames = max(1, int(blockDurationSec * sampleRate))
+    maxFrames = int(effectiveDuration * sampleRate)
+    minListenSec = min(1.0, effectiveDuration)
+    silenceStopSec = 0.7
+    speechThreshold = 350.0
 
-    frames = int(effectiveDuration * sampleRate)
-    audio = sd.rec(frames, dtype="int16", channels=1)
-    sd.wait()
+    capturedFrames = 0
+    silentAfterSpeechFrames = 0
+    speechStarted = False
+    chunks: list[np.ndarray] = []
 
-    fd, temp_path = tempfile.mkstemp(prefix="stt_", suffix=".wav")
+    with sd.InputStream(samplerate=sampleRate, channels=1, dtype="int16") as stream:
+        while capturedFrames < maxFrames:
+            chunk, overflowed = stream.read(blockFrames)
+            if overflowed:
+                continue
+
+            chunks.append(chunk.copy())
+            currentFrames = int(chunk.shape[0])
+            capturedFrames += currentFrames
+
+            level = float(np.abs(chunk).mean())
+            if level >= speechThreshold:
+                speechStarted = True
+                silentAfterSpeechFrames = 0
+            elif speechStarted:
+                silentAfterSpeechFrames += currentFrames
+
+            elapsedSec = capturedFrames / sampleRate
+            if (
+                speechStarted
+                and elapsedSec >= minListenSec
+                and (silentAfterSpeechFrames / sampleRate) >= silenceStopSec
+            ):
+                break
+
+    if chunks:
+        audio = np.concatenate(chunks, axis=0).astype("int16")
+    else:
+        audio = np.zeros((1, 1), dtype="int16")
+
+    fd, tempPath = tempfile.mkstemp(prefix="stt_", suffix=".wav")
     os.close(fd)
 
-    with wave.open(temp_path, "wb") as wav_file:
-        wav_file.setnchannels(1)
-        wav_file.setsampwidth(2) 
-        wav_file.setframerate(sampleRate)
-        wav_file.writeframes(audio.tobytes())
+    with wave.open(tempPath, "wb") as wavFile:
+        wavFile.setnchannels(1)
+        wavFile.setsampwidth(2) 
+        wavFile.setframerate(sampleRate)
+        wavFile.writeframes(audio.tobytes())
 
-    return temp_path
+    return tempPath
  
  
 def transcribe_audio(audio_path: str) -> str:
@@ -70,10 +107,15 @@ def transcribe_audio(audio_path: str) -> str:
          str(path),
          language=settings.stt_language,
          beam_size=int(settings.stt_beam_size),
+        vad_filter=True,
+         initial_prompt=(
+             "Komutları Türkçe algıla. Uygulama adlarında steam ve whatsapp gibi uygulamaların adlarını "
+             "kelimelerini doğru yaz."
+         ),
      )
  
      transcriptParts = [segment.text for segment in segments]
      transcript = "".join(transcriptParts).strip()
- 
-     return transcript
+     correctedTranscript = normalize_spoken_command(transcript)
+     return correctedTranscript
  
