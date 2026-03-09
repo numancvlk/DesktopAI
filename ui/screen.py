@@ -147,6 +147,20 @@ class MainScreen(QMainWindow):
                 background-color: #022c22;
             }
 
+            QPushButton#ModeButton {
+                background-color: #020617;
+                border-color: #334155;
+                color: #cbd5e1;
+                min-width: 72px;
+            }
+
+            QPushButton#ModeButton:checked {
+                background-color: #1d4ed8;
+                border-color: #2563eb;
+                color: #f8fafc;
+                font-weight: 600;
+            }
+
             QFrame#BottomBar {
                 background-color: #020617;
                 border-radius: 999px;
@@ -196,12 +210,14 @@ class MainScreen(QMainWindow):
 
         modeRow = QHBoxLayout()
         self.assistantModeButton = QPushButton("Asistan")
+        self.assistantModeButton.setObjectName("ModeButton")
         self.assistantModeButton.setCheckable(True)
         self.assistantModeButton.setChecked(True)
         self.assistantModeButton.clicked.connect(self.on_mode_assistant_clicked)
         modeRow.addWidget(self.assistantModeButton)
 
         self.ragModeButton = QPushButton("RAG")
+        self.ragModeButton.setObjectName("ModeButton")
         self.ragModeButton.setCheckable(True)
         self.ragModeButton.setChecked(False)
         self.ragModeButton.clicked.connect(self.on_mode_rag_clicked)
@@ -210,7 +226,7 @@ class MainScreen(QMainWindow):
         headerRow.addLayout(modeRow)
         headerRow.addStretch()
 
-        self.statusLabel = QLabel("Hazır")
+        self.statusLabel = QLabel("Mod: Asistan")
         self.statusLabel.setObjectName("StatusLabel")
         headerRow.addWidget(self.statusLabel, alignment=Qt.AlignRight | Qt.AlignVCenter)
 
@@ -262,6 +278,24 @@ class MainScreen(QMainWindow):
         bottomLayout.addWidget(self.sendButton)
 
         root.addWidget(bottomFrame)
+        self.refresh_mode_ui()
+
+    def mode_name(self) -> str:
+        return "RAG" if self.currentMode == "rag" else "Asistan"
+
+    def refresh_mode_ui(self):
+        isRag = self.currentMode == "rag"
+        self.assistantModeButton.setChecked(not isRag)
+        self.ragModeButton.setChecked(isRag)
+        self.pdfButton.setEnabled(isRag)
+
+        if isRag:
+            if "PDF yüklendi" not in self.ragInfoLabel.text():
+                self.ragInfoLabel.setText("RAG: Aktif")
+        else:
+            self.ragInfoLabel.setText("RAG: Pasif (Asistan modu)")
+
+        self.statusLabel.setText(f"Mod: {self.mode_name()}")
 
     def on_send_clicked(self):
         text = self.inputLine.text().strip()
@@ -272,7 +306,7 @@ class MainScreen(QMainWindow):
         self.inputLine.clear()
         self.chatArea.append(f"<b>Sen:</b> {text}")
         self.sendButton.setEnabled(False)
-        self.statusLabel.setText("Düşünüyor...")
+        self.statusLabel.setText(f"Mod: {self.mode_name()} • Düşünüyor...")
         self.worker = LLMWorker(text, mode=self.currentMode)
         self.worker.startedProcessing.connect(self.on_started)
         self.worker.newMessage.connect(self.on_message_ready)
@@ -290,7 +324,7 @@ class MainScreen(QMainWindow):
         self.chatArea.append(f"<span style='color: red;'><b>Hata:</b> {message}</span>")
 
     def on_finished(self): 
-        self.statusLabel.setText("")
+        self.statusLabel.setText(f"Mod: {self.mode_name()}")
         self.sendButton.setEnabled(True)
         self.worker = None
 
@@ -299,7 +333,7 @@ class MainScreen(QMainWindow):
             return
 
         self.voiceButton.setEnabled(False)
-        self.statusLabel.setText("Dinliyor...")
+        self.statusLabel.setText(f"Mod: {self.mode_name()} • Dinliyor...")
 
         self.voiceWorker = VoiceListenWorker()
         self.voiceWorker.transcriptReady.connect(self.on_voice_transcript_ready)
@@ -309,7 +343,7 @@ class MainScreen(QMainWindow):
 
     def on_voice_transcript_ready(self, text: str):
         if not text:
-            self.statusLabel.setText("")
+            self.statusLabel.setText(f"Mod: {self.mode_name()}")
             self.voiceButton.setEnabled(True)
             return
 
@@ -322,7 +356,7 @@ class MainScreen(QMainWindow):
         )
 
     def on_voice_finished(self):
-        self.statusLabel.setText("")
+        self.statusLabel.setText(f"Mod: {self.mode_name()}")
         self.voiceButton.setEnabled(True)
         self.voiceWorker = None
 
@@ -341,7 +375,7 @@ class MainScreen(QMainWindow):
             return
 
         self.pdfButton.setEnabled(False)
-        self.statusLabel.setText("PDF indeksleniyor...")
+        self.statusLabel.setText("Mod: RAG • PDF indeksleniyor.")
 
         self.ragWorker = RAGIndexWorker(file_path)
         self.ragWorker.indexingFinished.connect(self.on_pdf_indexed)
@@ -361,7 +395,7 @@ class MainScreen(QMainWindow):
         )
 
     def on_pdf_finished(self):
-        self.statusLabel.setText("")
+        self.statusLabel.setText(f"Mod: {self.mode_name()} • Hazır")
         self.pdfButton.setEnabled(True)
         self.ragWorker = None
 
@@ -370,18 +404,11 @@ class MainScreen(QMainWindow):
             return
 
         self.currentMode = "assistant"
-        self.assistantModeButton.setChecked(True)
-        self.ragModeButton.setChecked(False)
-        self.pdfButton.setEnabled(False)
-        self.ragInfoLabel.setText("RAG: Pasif (Asistan modu)")
+        self.refresh_mode_ui()
 
     def on_mode_rag_clicked(self):
         if self.currentMode == "rag":
             return
 
         self.currentMode = "rag"
-        self.assistantModeButton.setChecked(False)
-        self.ragModeButton.setChecked(True)
-        self.pdfButton.setEnabled(True)
-        if "PDF yüklendi" not in self.ragInfoLabel.text():
-            self.ragInfoLabel.setText("RAG: Aktif (PDF yükleyebilirsiniz)")
+        self.refresh_mode_ui()

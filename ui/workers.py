@@ -5,6 +5,7 @@ from core.action import SafeExecutor
 from core.validate import IntentParser, IntentParserError, SecurityValidator
 from core.config import get_settings
 from core.rag import retrieve_relevant_chunks, build_augmented_user_input
+from core.local_intents import detect_local_intent
 
 
 class LLMWorker(QThread): #LLM Worker
@@ -43,21 +44,30 @@ class LLMWorker(QThread): #LLM Worker
                 self.newMessage.emit(answer)
                 return
 
-            enrichedInput = self.userInput
-            rawJson = llm.call(history, enrichedInput)
-            parser = IntentParser()
-            intent = parser.parse(rawJson)
-            validator = SecurityValidator()
-            normalized = validator.validate(intent)
+            forcedIntent = detect_local_intent(self.userInput)
 
-            displayResponse = normalized.response
+            if forcedIntent is not None:
+                command = forcedIntent["command"]
+                parameters = forcedIntent["parameters"]
+                displayResponse = forcedIntent["response"]
+            else:
+                enrichedInput = self.userInput
+                rawJson = llm.call(history, enrichedInput)
+                parser = IntentParser()
+                intent = parser.parse(rawJson)
+                validator = SecurityValidator()
+                normalized = validator.validate(intent)
+                command = normalized.command
+                parameters = normalized.parameters
+                displayResponse = normalized.response
+
 
             try:
                 executor = SafeExecutor()
-                result = executor.execute(normalized.command, normalized.parameters)
+                result = executor.execute(command, parameters)
                 
                 if result and isinstance(result, str):
-                    displayResponse = f"{normalized.response} Dosya: {result}"
+                    displayResponse = f"{displayResponse} Dosya: {result}"
 
             except RuntimeError as e:
                 self.errorOccured.emit(str(e))

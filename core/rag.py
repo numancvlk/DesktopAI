@@ -23,7 +23,7 @@ def get_chroma_collection() -> chromadb.Client:
     persistDirectory = baseDirectory / "index"
     persistDirectory.mkdir(parents=True, exist_ok=True)
 
-    chroma_client = chromadb.PersistentClient(path=str(persistDirecotry))
+    chroma_client = chromadb.PersistentClient(path=str(persistDirectory))
     chroma_collection = chroma_client.get_or_create_collection(name="pdf_docs")
     return chroma_collection
 
