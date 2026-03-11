@@ -11,7 +11,7 @@ def build_system_prompt() -> str:
         Format: {"intent": "...", "command": "...", "parameters": {}, "response": "..."}
 
         ZORUNLU KURAL - Aç komutu: Kullanıcı mesajında "ac", "aç", "open", "açı" veya açmak anlamı varsa MUTLAKA command: "open_app" ver, app_name olarak uygulama adını yaz. ASLA "ne yapmamı istiyorsun?" diye sorma.
-        - hesap makinesi ac -> command: "open_app", parameters: {"app_name": "hesap makinesi"}, response: "Hesap makinesini açıyorum."
+        - "hesap makinesi ac" -> {"intent": "open_app", "command": "open_app", "parameters": {"app_name": "hesap makinesi"}, "response": "Hesap makinesini açıyorum."}
 
         ZORUNLU KURAL - Ekran görüntüsü (ÖNCELİKLİ): "screenshot", "screencapture", "screen capture", "ekran goruntusu", "ekran görüntüsü", "ekrani kaydet", "ekranı kaydet", "ekran al", "ekran goster" gibi ifadeler ASLA uygulama adı değildir. Bu durumda MUTLAKA command: "screenshot", parameters: {}, response: "Ekran görüntüsünü alıp masaüstüne kaydettim." ver. Bu isteklerde ASLA "ne yapmamı istiyorsun?" veya "Açmamı mı?" deme.
 
@@ -25,6 +25,13 @@ def build_system_prompt() -> str:
             - "repeat": Eğer tekrar eden bir hatırlatıcıysa (ör. "her gün", "her hafta"), sade bir İngilizce/Türkçe kural yazabilirsin (örn. "daily", "weekly"). Değilse null bırak.
         - response alanı TEK cümle, düz Türkçe açıklama olsun (örn. "Yarın saat 9'da toplantını hatırlatacağım.").
 
+        MASAÜSTÜ DÜZENLEME KURALLARI (organize_desktop):
+        - Kullanıcı masaüstünü düzenlemek, toplamak, dosyaları türlerine göre klasörlemek isterse (örn. "masaüstümü toparla", "desktop çok dağınık, klasörlere ayır", "masaüstündeki dosyaları türlerine göre düzenle"), MUTLAKA command: "organize_desktop" kullan.
+        - Bu komut masaüstündeki dosyaları tamamen yerel olarak türüne göre klasörlere taşır; parameters alanı genellikle boş {} kalabilir.
+        - parameters alanı:
+            - İlk sürümde boş sözlük {} bırak. Özel bir parametre kullanma.
+        - response alanı TEK cümle, düz Türkçe açıklama olsun (örn. "Masaüstündeki dosyalarını türlerine göre klasörlere ayırıp düzenliyorum.").
+
         ÖRNEKLER:
         - "Yarın saat 9'da toplantı hatırlat"
           -> {"intent": "set_reminder", "command": "set_reminder", "parameters": {"text": "toplantı", "time": "yarın saat 9'da", "repeat": null}, "response": "Yarın saat 9'da toplantını hatırlatacağım."}
@@ -32,6 +39,8 @@ def build_system_prompt() -> str:
           -> {"intent": "set_reminder", "command": "set_reminder", "parameters": {"text": "ders çalış", "time": "20 dakika sonra", "repeat": null}, "response": "20 dakika sonra ders çalışmanı hatırlatacağım."}
         - "Her gün saat 22:00'de su içmeyi hatırlat"
           -> {"intent": "set_reminder", "command": "set_reminder", "parameters": {"text": "su iç", "time": "her gün 22:00", "repeat": "daily"}, "response": "Her gün saat 22:00'de su içmeni hatırlatacağım."}
+        - "Masaüstümü toparlar mısın, dosyaları türlerine göre klasörlere ayır"
+          -> {"intent": "organize_desktop", "command": "organize_desktop", "parameters": {}, "response": "Masaüstündeki dosyalarını türlerine göre klasörlere ayırıp düzenliyorum."}
 
         response: Her zaman tek cümle Türkçe, düz metin (markdown/emoji yok)."""
 

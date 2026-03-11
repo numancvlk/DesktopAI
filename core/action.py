@@ -2,6 +2,8 @@
 import os
 import re
 import time
+import shutil
+import itertools
 import pyautogui
 import pyperclip
 from datetime import datetime, timedelta
@@ -74,6 +76,154 @@ def screenshot_save_dir() -> Path:
     return Path(settings.screenshot_save_dir)
 
 
+def desktop_dir() -> Path:
+
+
+    userprofile = os.environ.get("USERPROFILE", "") or None
+
+    if userprofile:
+        up = Path(userprofile)
+        preferreddesktop1 = up / "OneDrive" / "Masaüstü"
+        if preferreddesktop1.is_dir():
+            return preferreddesktop1
+
+    home = Path.home()
+
+    preferredDesktop = home / "OneDrive" / "Masaüstü"
+    if preferredDesktop.is_dir():
+        return preferredDesktop
+
+    bases = []
+
+    if userprofile:
+        up = Path(userprofile)
+        bases.append(up)
+
+        for child in up.iterdir():
+            if child.is_dir() and child.name.lower().startswith("onedrive"):
+                bases.append(child)
+
+    if home not in bases:
+        bases.append(home)
+
+        for child in home.iterdir():
+            if child.is_dir() and child.name.lower().startswith("onedrive"):
+                bases.append(child)
+
+    checked = set()
+
+    for base in bases:
+        if base in checked or not base.is_dir():
+            continue
+
+        checked.add(base)
+
+        for folder_name in ("Masaüstü", "Desktop"):
+
+            candidate = base / folder_name
+            if candidate.is_dir():
+                return candidate
+
+    return home / "Desktop"
+
+
+def resolve_name_collision(targetPath: Path) -> Path:
+    parent = targetPath.parent
+    stem = targetPath.stem
+    suffix = targetPath.suffix
+
+    for index in itertools.count(1):
+        candidate = parent / f"{stem}_{index}{suffix}"
+
+        if not candidate.exists():
+            return candidate
+
+
+def organize_desktop() -> str:
+    desktop = desktop_dir()
+
+    if not desktop.is_dir():
+        raise RuntimeError("Masaüstü klasörü bulunamadi")
+
+    dosyaYollari: Dict[str, tuple[str, Optional[str]]] = {
+        ".pdf": ("Belgeler", "PDF"),
+        ".doc": ("Belgeler", "Word"),
+        ".docx": ("Belgeler", "Word"),
+        ".txt": ("Belgeler", None),
+        ".xls": ("Belgeler", "Excel"),
+        ".xlsx": ("Belgeler", "Excel"),
+        ".ppt": ("Belgeler", "PowerPoint"),
+        ".pptx": ("Belgeler", "PowerPoint"),
+ 
+        ".jpg": ("Resimler ve Videolar", "Resimler"),
+        ".jpeg": ("Resimler ve Videolar", "Resimler"),
+        ".png": ("Resimler ve Videolar", "Resimler"),
+        ".gif": ("Resimler ve Videolar", "Resimler"),
+
+
+        ".mp4": ("Resimler ve Videolar", "Videolar"),
+        ".mkv": ("Resimler ve Videolar", "Videolar"),
+        ".avi": ("Resimler ve Videolar", "Videolar"),
+        ".mov": ("Resimler ve Videolar", "Videolar"),
+
+        ".mp3": ("Muzik", None),
+        ".wav": ("Muzik", None),
+
+        ".zip": ("Arsivler", None),
+        ".rar": ("Arsivler", None),
+
+        ".lnk": ("Kisayollar", None),
+    }
+
+    moved: Dict[str, int] = {}
+
+    for entry in desktop.iterdir():
+        if not entry.is_file():
+            continue
+
+        if entry.name.startswith("."):
+            continue
+
+        ext = entry.suffix.lower()
+        if not ext:
+            continue
+
+        mapping = dosyaYollari.get(ext)
+        if not mapping:
+            continue
+
+        categoryName, subfolder = mapping
+
+        targetDir = desktop / categoryName
+        if subfolder:
+            targetDir = targetDir / subfolder
+        targetDir.mkdir(parents=True, exist_ok=True)
+
+        targetPath = targetDir / entry.name
+        if targetPath.exists():
+            targetPath = resolve_name_collision(targetPath)
+
+        try:
+            shutil.move(str(entry), str(targetPath))
+            moved[categoryName] = moved.get(categoryName, 0) + 1
+        except OSError:
+            continue
+
+    totalMoved = sum(moved.values())
+
+    if totalMoved == 0:
+        return "Taşınacak uygun dosya bulunamadı, masaüstü zaten düzenli görünüyor."
+
+    parts = []
+
+    for name, count in moved.items():
+        if count:
+            parts.append(f"{count} dosya '{name}' klasörüne taşındı")
+
+    summary = ", ".join(parts)
+    return f"Masaüstü düzenlendi: {summary}."
+
+
 def take_screenshot() -> str:
     saveDir = screenshot_save_dir()
     saveDir.mkdir(parents=True, exist_ok=True)
@@ -125,7 +275,7 @@ def parse_reminder_time(raw: Any) -> datetime:
 
 
 class SafeExecutor:
-    ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder"}
+    ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder", "organize_desktop"}
 
     def execute(self, command: str, parameters: Dict[str, Any]) -> Optional[str]:
         cmd = (command or "").strip().lower()
@@ -152,6 +302,9 @@ class SafeExecutor:
 
         if cmd == "screenshot":
             return take_screenshot()
+
+        if cmd == "organize_desktop":
+            return organize_desktop()
 
         if cmd == "set_reminder": #TODO KONTROL EDILECEK HATIRLATMA CALISMIYOR
             if not isinstance(parameters, dict):
