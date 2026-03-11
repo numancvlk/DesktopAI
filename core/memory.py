@@ -26,6 +26,18 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS reminders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                text TEXT NOT NULL,
+                dueAt TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                repeatRule TEXT,
+                createdAt TEXT NOT NULL
+            )
+            """
+        )
         conn.commit()
         conn.close()
     except:

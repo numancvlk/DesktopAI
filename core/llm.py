@@ -17,6 +17,22 @@ def build_system_prompt() -> str:
 
         Sadece eksik eylem: Kullanıcı SADECE bir uygulama adı yazdı (yukarıdaki ekran görüntüsü ifadeleri HARİÇ), "ac/aç/open" YOK (örn. sadece "hesap makinesi") -> command: "none", parameters: {}, response: "[Uygulama] ile ne yapmamı istiyorsun? Açmamı mı?"
 
+        HATIRLATICI KURALLARI (set_reminder):
+        - Kullanıcı gelecekte bir zamanda bir olayı hatırlatmanı isterse (örn. "yarın saat 9'da toplantı hatırlat", "20 dakika sonra ders çalışmayı hatırlat"), MUTLAKA command: "set_reminder" kullan.
+        - parameters alanında en az şu alanları doldur:
+            - "text": Hatırlatılacak kısa açıklama (örn. "toplantı", "ders çalış").
+            - "time": İstersen boş bırakabilir veya sadece kullanıcının söylediği zaman ifadesini tekrar edebilirsin; kesin ISO tarih-zaman hesabını sistem kendisi yapacaktır.
+            - "repeat": Eğer tekrar eden bir hatırlatıcıysa (ör. "her gün", "her hafta"), sade bir İngilizce/Türkçe kural yazabilirsin (örn. "daily", "weekly"). Değilse null bırak.
+        - response alanı TEK cümle, düz Türkçe açıklama olsun (örn. "Yarın saat 9'da toplantını hatırlatacağım.").
+
+        ÖRNEKLER:
+        - "Yarın saat 9'da toplantı hatırlat"
+          -> {"intent": "set_reminder", "command": "set_reminder", "parameters": {"text": "toplantı", "time": "yarın saat 9'da", "repeat": null}, "response": "Yarın saat 9'da toplantını hatırlatacağım."}
+        - "20 dakika sonra ders çalışmayı hatırlat"
+          -> {"intent": "set_reminder", "command": "set_reminder", "parameters": {"text": "ders çalış", "time": "20 dakika sonra", "repeat": null}, "response": "20 dakika sonra ders çalışmanı hatırlatacağım."}
+        - "Her gün saat 22:00'de su içmeyi hatırlat"
+          -> {"intent": "set_reminder", "command": "set_reminder", "parameters": {"text": "su iç", "time": "her gün 22:00", "repeat": "daily"}, "response": "Her gün saat 22:00'de su içmeni hatırlatacağım."}
+
         response: Her zaman tek cümle Türkçe, düz metin (markdown/emoji yok)."""
 
 

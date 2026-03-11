@@ -87,7 +87,7 @@ class IntentParser:
 
         data["intent"] = str(data.get("intent") or "").strip()
         cmd = str(data.get("command") or "none").strip().lower()
-        data["command"] = cmd if cmd in ("none", "open_app", "screenshot") else "none"
+        data["command"] = cmd if cmd in ("none", "open_app", "screenshot", "set_reminder") else "none"
         params = data.get("parameters")
         data["parameters"] = dict(params) if isinstance(params, dict) else {}
         rawResponse = data.get("response")
@@ -100,7 +100,7 @@ class IntentParser:
 
 
 class SecurityValidator:
-    ALLOWED_COMMANDS = {"none", "open_app", "screenshot"}
+    ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder"}
     FORBIDDEN_KEYWORDS = (
         "powershell",
         "get-startapps",

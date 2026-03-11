@@ -1,4 +1,7 @@
 #LIBRARIES
+import re
+import datetime
+from typing import Any, Dict
 from PySide6.QtCore import QThread, Signal
 from core import memory, llm
 from core.action import SafeExecutor
@@ -6,6 +9,78 @@ from core.validate import IntentParser, IntentParserError, SecurityValidator
 from core.config import get_settings
 from core.rag import retrieve_relevant_chunks, build_augmented_user_input
 from core.local_intents import detect_local_intent
+
+
+def normalize_text_for_time(text: str) -> str:
+    lowered = (text or "").strip().lower()
+    lowered = (
+        lowered.replace("ç", "c")
+        .replace("ğ", "g")
+        .replace("ı", "i")
+        .replace("ö", "o")
+        .replace("ş", "s")
+        .replace("ü", "u")
+    )
+    return lowered
+
+
+def override_relative_reminder_time(user_text: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = normalize_text_for_time(user_text)
+
+    match = re.search(r"(\d+)\s*(saniye|sn|dakika|dk|saat)\s*sonra", normalized)
+
+    if match:
+        amount = int(match.group(1))
+        unit = match.group(2)
+
+        now = datetime.datetime.utcnow()
+
+        if unit in ("saniye", "sn"):
+            due = now + datetime.timedelta(seconds=amount)
+        elif unit in ("dakika", "dk"):
+            due = now + datetime.timedelta(minutes=amount)
+        else:
+            due = now + datetime.timedelta(hours=amount)
+
+        iTime = due.strftime("%Y-%m-%dT%H:%M:%S")
+        newParams = dict(parameters) if isinstance(parameters, dict) else {}
+        newParams["time"] = iTime
+        return newParams
+
+    timeMatch = re.search(r"(\d{1,2})[.:](\d{2})", normalized)
+
+    if timeMatch:
+        hour = int(timeMatch.group(1))
+        minute = int(timeMatch.group(2))
+
+        now = datetime.datetime.utcnow()
+        base_date = now.date()
+
+        if "yarin" in normalized or "yarın" in user_text.lower():
+            base_date = base_date + datetime.timedelta(days=1)
+        elif "bugun" in normalized or "bu gun" in normalized or "bugün" in user_text.lower():
+            base_date = base_date
+        else:
+            candidate = datetime.datetime.combine(base_date, datetime.time(hour=hour, minute=minute))
+
+            if candidate <= now:
+                base_date = base_date + datetime.timedelta(days=1)
+
+        due = datetime.datetime(
+            year=base_date.year,
+            month=base_date.month,
+            day=base_date.day,
+            hour=hour,
+            minute=minute,
+            second=0,
+        )
+
+        iTime = due.strftime("%Y-%m-%dT%H:%M:%S")
+        newParams = dict(parameters) if isinstance(parameters, dict) else {}
+        newParams["time"] = iTime
+        return newParams
+
+    return parameters
 
 
 class LLMWorker(QThread): #LLM Worker
@@ -53,12 +128,17 @@ class LLMWorker(QThread): #LLM Worker
             else:
                 enrichedInput = self.userInput
                 rawJson = llm.call(history, enrichedInput)
+                print("LLM RAW RESPONSE:", rawJson) #TODO DEBUG KALDIRILACAK
                 parser = IntentParser()
                 intent = parser.parse(rawJson)
                 validator = SecurityValidator()
                 normalized = validator.validate(intent)
                 command = normalized.command
                 parameters = normalized.parameters
+
+                if command == "set_reminder":
+                    parameters = override_relative_reminder_time(self.userInput, parameters)
+
                 displayResponse = normalized.response or "Anladım, devam edelim."
 
 

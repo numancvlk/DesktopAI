@@ -1,5 +1,5 @@
 #LIBRARIES
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -11,10 +11,126 @@ from PySide6.QtWidgets import (
     QLabel,
     QFrame,
     QFileDialog,
+    QDialog,
+    QVBoxLayout as QDialogVBoxLayout,
 )
 from ui.workers import LLMWorker
 from ui.voice_workers import VoiceListenWorker
 from ui.rag_workers import RAGIndexWorker
+from core import reminders
+import datetime
+
+
+class ReminderDialog(QDialog):
+    def __init__(self, text: str, parent: QMainWindow | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Hatırlatma")
+        self.setModal(True)
+        self.setMinimumWidth(380)
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setStyleSheet(
+            """
+            QDialog {
+                background-color: #020617;
+            }
+
+            QLabel {
+                font-family: "Segoe UI", Arial, sans-serif;
+                font-size: 13px;
+                color: #e5e7eb;
+            }
+
+            QPushButton {
+                border-radius: 999px;
+                padding: 7px 16px;
+                font-size: 13px;
+                font-weight: 500;
+                border: 1px solid #1f2937;
+                background-color: #020617;
+                color: #e5e7eb;
+            }
+
+            QPushButton:hover:!disabled {
+                background-color: #111827;
+            }
+
+            QPushButton#PrimaryButton {
+                background-color: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 0,
+                    stop: 0 #2563eb,
+                    stop: 1 #4f46e5
+                );
+                border-color: #1d4ed8;
+                color: #f9fafb;
+            }
+
+            QPushButton#PrimaryButton:hover:!disabled {
+                background-color: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 0,
+                    stop: 0 #1d4ed8,
+                    stop: 1 #4338ca
+                );
+                border-color: #1d4ed8;
+            }
+
+            QPushButton#PrimaryButton:pressed:!disabled {
+                background-color: #1d4ed8;
+                border-color: #1e40af;
+            }
+
+            QFrame#ReminderCard {
+                background-color: #020617;
+                border-radius: 16px;
+                border: 1px solid #111827;
+            }
+            """
+        )
+
+        layout = QDialogVBoxLayout(self)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
+
+        container = QFrame(self)
+        container.setObjectName("ReminderCard")
+
+        containerLayout = QVBoxLayout(container)
+        containerLayout.setContentsMargins(16, 16, 16, 16)
+        containerLayout.setSpacing(10)
+
+        titleLabel = QLabel("Hatırlatma")
+        titleLabel.setObjectName("TitleLabel")
+        containerLayout.addWidget(titleLabel)
+
+        textLabel = QLabel(text)
+        textLabel.setWordWrap(True)
+        containerLayout.addWidget(textLabel)
+
+        buttonRow = QHBoxLayout()
+        buttonRow.setSpacing(8)
+
+        self.okButton = QPushButton("Tamam")
+        self.okButton.setObjectName("PrimaryButton")
+        self.snoozeButton = QPushButton("5 dakika sonra")
+
+        self.okButton.clicked.connect(self.accept)
+        self.snoozeButton.clicked.connect(self.on_snooze_clicked)
+
+        buttonRow.addStretch()
+        buttonRow.addWidget(self.snoozeButton)
+        buttonRow.addWidget(self.okButton)
+
+        containerLayout.addLayout(buttonRow)
+        layout.addWidget(container)
+
+        self._snoozed = False
+
+    def on_snooze_clicked(self) -> None:
+        self._snoozed = True
+        self.accept()
+
+    @property
+    def snoozed(self) -> bool:
+        return self._snoozed
 
 
 class MainScreen(QMainWindow):
@@ -24,6 +140,7 @@ class MainScreen(QMainWindow):
         self.voiceWorker = None
         self.ragWorker = None
         self.currentMode = "assistant"
+        self.reminderTimer = None
         self.build_ui()
 
     def build_ui(self): 
@@ -279,6 +396,48 @@ class MainScreen(QMainWindow):
 
         root.addWidget(bottomFrame)
         self.refresh_mode_ui()
+
+        self.reminderTimer = QTimer(self)
+        self.reminderTimer.setInterval(15000)
+        self.reminderTimer.timeout.connect(self.check_reminders)
+        self.reminderTimer.start()
+
+    def check_reminders(self):
+        try:
+            due_list = reminders.get_due_reminders()
+        except RuntimeError:
+            return
+
+        if not due_list:
+            return
+
+        for item in due_list:
+            text = item.get("text") or ""
+            reminder_id = item.get("id")
+
+            if reminder_id is None:
+                continue
+
+            dialog = ReminderDialog(text, parent=self)
+            result = dialog.exec()
+
+            if result != QDialog.Accepted:
+                continue
+
+            try:
+                if dialog.snoozed:
+                    new_due = datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
+                    reminders.reschedule_reminder(int(reminder_id), new_due)
+                    self.chatArea.append(
+                        f"<span style='color: #a5b4fc;'><b>Hatırlatma ertelendi:</b> {text} (5 dakika sonra)</span>"
+                    )
+                else:
+                    reminders.mark_reminder_done(int(reminder_id))
+                    self.chatArea.append(
+                        f"<span style='color: #fde68a;'><b>Hatırlatma:</b> {text}</span>"
+                    )
+            except RuntimeError:
+                continue
 
     def mode_name(self) -> str:
         return "RAG" if self.currentMode == "rag" else "Asistan"

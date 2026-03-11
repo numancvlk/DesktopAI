@@ -4,10 +4,11 @@ import re
 import time
 import pyautogui
 import pyperclip
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional
 from .config import get_settings
+from . import reminders
 
 SAFE_APP_PATTERN = re.compile(r"^[a-zA-Z0-9\u00c0-\u024f\s\-_.]{1,80}$")
 FORBIDDEN_APP = (
@@ -95,8 +96,36 @@ def take_screenshot() -> str:
     return str(filepath)
 
 
+def parse_reminder_time(raw: Any) -> datetime:
+
+    if not isinstance(raw, str) or not raw.strip():
+        raise RuntimeError("Hatırlatıcı zamanı yanlis")
+
+    value = raw.strip()
+
+    candidate = value[:-1] if value.endswith("Z") else value
+
+    try:
+        return datetime.fromisoformat(candidate)
+    except ValueError:
+        pass
+
+    match = re.match(r"^\+(\d+)([mh])$", value)
+
+    if match:
+        amount = int(match.group(1))
+        unit = match.group(2)
+        now = datetime.utcnow()
+
+        if unit == "m":
+            return now + timedelta(minutes=amount)
+        return now + timedelta(hours=amount)
+
+    raise RuntimeError("Hatırlatıcı zamanı yanlis")
+
+
 class SafeExecutor:
-    ALLOWED_COMMANDS = {"none", "open_app", "screenshot"}
+    ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder"}
 
     def execute(self, command: str, parameters: Dict[str, Any]) -> Optional[str]:
         cmd = (command or "").strip().lower()
@@ -123,5 +152,29 @@ class SafeExecutor:
 
         if cmd == "screenshot":
             return take_screenshot()
+
+        if cmd == "set_reminder": #TODO KONTROL EDILECEK HATIRLATMA CALISMIYOR
+            if not isinstance(parameters, dict):
+                raise RuntimeError("Hatırlatıcı parametreleri geçersiz")
+
+            text = parameters.get("text")
+            rawTime = parameters.get("time")
+            repeat = parameters.get("repeat")
+
+            if not isinstance(text, str) or not text.strip():
+                raise RuntimeError("Hatırlatıcı metni geçersiz")
+
+            due_at = parse_reminder_time(rawTime)
+
+            repeat_rule: Optional[str] = None
+            if isinstance(repeat, str) and repeat.strip():
+                repeat_rule = repeat.strip()
+
+            reminders.create_reminder(
+                text=text.strip(),
+                due_at=due_at,
+                repeat_rule=repeat_rule,
+            )
+            return None
 
         return None
