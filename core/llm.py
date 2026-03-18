@@ -33,10 +33,6 @@ def build_system_prompt() -> str:
         - response alanı TEK cümle, düz Türkçe açıklama olsun (örn. "Masaüstündeki dosyalarını türlerine göre klasörlere ayırıp düzenliyorum.").
 
         ÖRNEKLER:
-        - "Yarın saat 9'da toplantı hatırlat"
-          -> {"intent": "set_reminder", "command": "set_reminder", "parameters": {"text": "toplantı", "time": "yarın saat 9'da", "repeat": null}, "response": "Yarın saat 9'da toplantını hatırlatacağım."}
-        - "20 dakika sonra ders çalışmayı hatırlat"
-          -> {"intent": "set_reminder", "command": "set_reminder", "parameters": {"text": "ders çalış", "time": "20 dakika sonra", "repeat": null}, "response": "20 dakika sonra ders çalışmanı hatırlatacağım."}
         - "Her gün saat 22:00'de su içmeyi hatırlat"
           -> {"intent": "set_reminder", "command": "set_reminder", "parameters": {"text": "su iç", "time": "her gün 22:00", "repeat": "daily"}, "response": "Her gün saat 22:00'de su içmeni hatırlatacağım."}
         - "Masaüstümü toparlar mısın, dosyaları türlerine göre klasörlere ayır"
@@ -46,28 +42,11 @@ def build_system_prompt() -> str:
 
 
 def build_rag_system_prompt() -> str:
-    return """Sen PDF dokümanları üzerinde çalışan bir soru-cevap asistanısın.
+    return """PDF soru-cevap asistanı. SADECE "--- KAYNAK METİN ---" bölümüne göre cevap ver.
 
-    Sana kullanıcının sorusuna ek olarak PDF'lerden alınmış bağlam parçaları verilecektir.
-
-    Genel kurallar:
-    - YANITIN SADECE düz Türkçe metin olsun, JSON veya başka bir format kullanma.
-    - Cevabını YALNIZCA verilen bağlamdaki bilgilere dayanarak ver; dış dünyadan ek bilgi kullanma.
-    - Eğer bağlam içinde sorunun cevabı AÇIKÇA geçiyorsa, o bilgiyi olduğu gibi kullanarak NET ve KESİN cevap ver.
-    - Eğer bağlamda sorunun cevabı YOKSA, "Bu PDF'te bu bilgi yer almıyor." de ve ASLA tahmin yapma.
-    - "internete bak", "değişebilir", "tam sayı bilinmiyor" gibi ifadeler KULLANMA.
-    - Soruyu sadece tekrar eden, genel ve muğlak cümleler KULLANMA; her zaman mümkün olan en SOMUT ve PDF'ten okunabilir bilgiyi ver.
-    - Masaüstü komutları, uygulama açma, ekran görüntüsü vb. ile ilgili hiçbir komut üretme; sadece bilgi amaçlı yanıt ver.
-
-    Özel olarak zaman çizelgesi / tablo soruları (ör. ders programı) için:
-    - Kullanıcının sorusunda GEÇEN günü (örn. Pazartesi, Salı, Çarşamba...) DİKKATLE oku.
-    - Cevabında HER ZAMAN sorulan günle AYNI günü kullan; farklı bir gün ismi söyleme veya uydurma.
-    - Bağlamdaki tabloda o güne karşılık gelen TÜM ders/satır değerlerini tek tek sırala.
-    - Örneğin tabloda "Pazartesi" sütununda Matematik, Matematik, Türk Dili ve Edebiyatı, İngilizce, İngilizce yazıyorsa
-    ve soru "Pazartesi derslerim neler?" ise cevabın "Pazartesi: Matematik, Matematik, Türk Dili ve Edebiyatı, İngilizce, İngilizce." gibi olsun.
-    - Eğer tabloda sorulan gün (örneğin "Salı") hiç geçmiyorsa, açıkça "Bu PDF'te Salı günü ile ilgili bilgi yer almıyor." de.
-
-    Cevapların 1-2 cümle, açık ve sade Türkçe olsun."""
+    Kurallar: Kaynakta varsa doğrudan kopyala. Yoksa "Bu PDF'te bu bilgi yer almıyor." de. Tahmin yapma.
+    Cevap: KISA, SADECE Türkçe. İngilizce kelime kullanma (Based on, column, table vb. YASAK). JSON/markdown (* **) kullanma.
+    YAPMA: Tablo yapısı analizi, sütun açıklaması, "Looking at the data" gibi açıklamalar. Doğrudan cevabı yaz: "Matematik" veya "Pazartesi: Matematik, ..." - o kadar."""
 
 
 def build_messages(history: List[dict], user_input: str) -> List[Dict[str, str]]:  # TODO Burda history ekledik ama daha kullanmadik  tam oalrak halledilcek ama sonra

@@ -102,7 +102,7 @@ class LLMWorker(QThread): #LLM Worker
             settings = get_settings()
 
             if self.mode == "rag":
-                enriched_input = self.userInput
+                enrichedInput = self.userInput
                 if settings.rag_enabled:
                     try:
                         ragChunks = retrieve_relevant_chunks(self.userInput)
@@ -111,7 +111,7 @@ class LLMWorker(QThread): #LLM Worker
                             ragChunks,
                         )
                     except RuntimeError:
-                        enrichedInput = self.userInput
+                        pass
 
                 answer = llm.call_rag(history, enrichedInput)
                 memory.append_message("user", self.userInput)
