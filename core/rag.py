@@ -88,8 +88,8 @@ def embed_text(text: str) -> List[float]:
         response = requests.post(url, json=payload, timeout=timeout)
         response.raise_for_status()
         data = response.json()
-    except requests.RequestException:
-        raise RuntimeError("Embedding alma hatasi")
+    except requests.RequestException as e:
+        raise RuntimeError(f"Embedding hatasi")
     except ValueError:
         raise RuntimeError("Embedding yaniti cozulemedi")
 
@@ -109,11 +109,11 @@ def index_pdf(file_path: str, metadata: Optional[Dict[str, Any]] = None) -> str:
 
     text = extract_text(file_path)
     if not text:
-        raise RuntimeError("PDF'den metin çıkarılamadı.")
+        raise RuntimeError("PDF'den metin çıkarılamiyor.")
 
     chunks = split_text_chunks(text)
     if not chunks:
-        raise RuntimeError("PDF için indekslenecek metin parçası bulunamadı.")
+        raise RuntimeError("PDF için indekslenecek metin yokj.")
 
     pdfPath = Path(file_path).resolve()
 

@@ -1,11 +1,10 @@
-#LIBRARIES  
+# LIBRARIES
 import re
 import unicodedata
 from difflib import get_close_matches
 from typing import Any, Dict, Optional
 from .action import safe_app_name
-
-#FUZZY MATCHINNG KULLANDIM BURDA SUANLIK IYI CALISIYOR BUNDAN BAHSETmeyi unutma
+from . import user_modes
 
 SCREENSHOT_PATTERNS = (
     "screenshot",
@@ -244,6 +243,52 @@ def has_screenshot_intent(normalized: str) -> bool:
     return any(f" {word} " in f" {normalized} " for word in SCREENSHOT_ACTION_WORDS)
 
 
+ORGANIZE_DESKTOP_KEYWORDS = (
+    "toparla", "toparlama", "duzenle", "düzenle", "duzenleme", "düzenleme",
+    "duzenleyiver", "duzernle", "duzernleyiver", "duzenleyiverme",
+    "masaustu", "masaüstü", "masaustumu", "masaüstümü", "masaustunu", "masaüstünü",
+    "masautunu", "desktop",
+    "klasor", "klasör", "klasorlere", "klasörlere", "klasorlere ayir",
+    "dosyalari", "dosyaları", "türlerine", "turlerine", "gore", "göre",
+)
+
+
+def try_activate_mode(text: str) -> Optional[Dict[str, Any]]:
+    if not text or not text.strip():
+        return None
+    try:
+        mods = user_modes.get_modes()
+    except RuntimeError:
+        return None
+    if not mods:
+        return None
+    normalized = normalize_user_text(text)
+    openkeyword = ("ac", "aç", "açı", "open", "baslat", "calistir")
+    for kw in openkeyword:
+        if kw in normalized:
+            candidate = re.sub(rf"\b{re.escape(kw)}\b", " ", normalized).strip()
+            candidate = re.sub(r"\s+", " ", candidate)
+            if candidate:
+                mode = user_modes.get_mode_name(candidate)
+                if mode:
+                    return mode
+    mode = user_modes.get_mode_name(text.strip())
+    if mode:
+        return mode
+    for m in mods:
+        name = (m.get("name") or "").strip().lower()
+        nameNorm = normalize_user_text(name)
+        if nameNorm and (nameNorm in normalized or normalized in nameNorm):
+            return m
+    return None
+
+
+def has_organize_desktop_intent(normalized: str) -> bool:
+    if not normalized:
+        return False
+    return any(kw in normalized for kw in ORGANIZE_DESKTOP_KEYWORDS)
+
+
 def detect_local_intent(text: str) -> Optional[Dict[str, Any]]:
     normalized = normalize_spoken_command(text)
 
@@ -252,6 +297,25 @@ def detect_local_intent(text: str) -> Optional[Dict[str, Any]]:
             "command": "screenshot",
             "parameters": {},
             "response": "Ekran görüntüsünü alıp masaüstüne kaydettim.",
+            "normalized": normalized,
+        }
+
+    modeMatch = try_activate_mode(text)
+    if modeMatch is not None:
+        mode_name = modeMatch.get("name", "").strip()
+        if mode_name:
+            return {
+                "command": "activate_mode",
+                "parameters": {"mode_name": mode_name},
+                "response": f"{mode_name} modunu açıyorum.",
+                "normalized": normalized,
+            }
+
+    if has_organize_desktop_intent(normalized):
+        return {
+            "command": "organize_desktop",
+            "parameters": {},
+            "response": "Masaüstündeki dosyalarını türlerine göre klasörlere ayırıyorum.",
             "normalized": normalized,
         }
 

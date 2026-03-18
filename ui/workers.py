@@ -3,42 +3,12 @@ import re
 import datetime
 from typing import Any, Dict
 from PySide6.QtCore import QThread, Signal
-from core import memory, llm, user_modes
+from core import memory, llm
 from core.action import SafeExecutor
 from core.validate import IntentParser, IntentParserError, SecurityValidator
 from core.config import get_settings
 from core.rag import retrieve_relevant_chunks, build_augmented_user_input
 from core.local_intents import detect_local_intent, resolve_app_name
-
-
-MOD_OPEN_KEYWORDS = ("ac", "aç", "açı", "open", "baslat", "başlat", "calistir", "çalıştır")
-
-
-def try_mode_match(user_input: str):
-    if not user_input or not user_input.strip():
-        return None
-    text = user_input.strip().lower()
-    textNor = text.replace("ç", "c").replace("ğ", "g").replace("ı", "i").replace("ö", "o").replace("ş", "s").replace("ü", "u")
-    for kw in MOD_OPEN_KEYWORDS:
-        if kw in textNor:
-            candidate = textNor.replace(kw, " ").strip()
-            candidate = re.sub(r"\s+", " ", candidate)
-            if candidate:
-                mode = user_modes.get_mode_name(candidate)
-                if mode:
-                    return mode
-    mode = user_modes.get_mode_name(user_input.strip())
-    if mode:
-        return mode
-    try:
-        for m in user_modes.get_modes():
-            name = (m.get("name") or "").strip().lower()
-            nameNor = name.replace("ç", "c").replace("ğ", "g").replace("ı", "i").replace("ö", "o").replace("ş", "s").replace("ü", "u")
-            if nameNor and (nameNor in textNor or textNor in nameNor):
-                return m
-    except RuntimeError:
-        pass
-    return None
 
 
 def normalize_text_for_time(text: str) -> str:
@@ -149,12 +119,8 @@ class LLMWorker(QThread): #LLM Worker
                 self.newMessage.emit(answer)
                 return
 
-            modeMatch = try_mode_match(self.userInput.strip())
-            if modeMatch is not None:
-                command = "activate_mode"
-                parameters = {"mode_name": modeMatch.get("name", self.userInput.strip())}
-                displayResponse = f"{modeMatch.get('name', '')} modunu açıyorum."
-            elif (forcedIntent := detect_local_intent(self.userInput)) is not None:
+            forcedIntent = detect_local_intent(self.userInput)
+            if forcedIntent is not None:
                 command = forcedIntent["command"]
                 parameters = forcedIntent["parameters"]
                 displayResponse = forcedIntent.get("response") or "Tamam."
@@ -182,12 +148,12 @@ class LLMWorker(QThread): #LLM Worker
             try:
                 executor = SafeExecutor()
                 result = executor.execute(command, parameters)
-                
+
                 if result and isinstance(result, str):
                     displayResponse = f"{displayResponse} Dosya: {result}"
 
             except RuntimeError as e:
-                self.errorOccured.emit(str(e))
+                displayResponse = str(e)
 
             memory.append_message("user", self.userInput)
             memory.append_message("assistant", displayResponse)

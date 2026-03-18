@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QFrame,
 )
 
-from core import userModes
+from core import user_modes
 
 
 SETTINGS_STYLESHEET = """
@@ -204,9 +204,9 @@ class ModEditDialog(QDialog):
 
         try:
             if self.modeId is not None:
-                userModes.update_mode(self.modeId, name, apps)
+                user_modes.update_mode(self.modeId, name, apps)
             else:
-                userModes.create_mode(name, apps)
+                user_modes.create_mode(name, apps)
             self.accept()
         except RuntimeError as e:
             QMessageBox.warning(self, "Hata", str(e))
@@ -285,7 +285,7 @@ class SettingsDialog(QDialog):
     def refresh_mods(self) -> None:
         self.modList.clear()
         try:
-            for mode in userModes.get_modes():
+            for mode in user_modes.get_modes():
                 item = QListWidgetItem(mode.get("name", ""))
                 item.setData(Qt.ItemDataRole.UserRole, mode.get("id"))
                 self.modList.addItem(item)
@@ -305,7 +305,7 @@ class SettingsDialog(QDialog):
 
         modeId = current.data(Qt.ItemDataRole.UserRole)
         try:
-            mode = userModes.get_mode_id(modeId)
+            mode = user_modes.get_mode_id(modeId)
             if mode:
                 apps = mode.get("app_names", [])
                 self.appPreviewLabel.setText(
@@ -327,7 +327,7 @@ class SettingsDialog(QDialog):
             return
         modeId = current.data(Qt.ItemDataRole.UserRole)
         try:
-            mode = userModes.get_mode_id(modeId)
+            mode = user_modes.get_mode_id(modeId)
             if not mode:
                 return
             dlg = ModEditDialog(
@@ -359,7 +359,7 @@ class SettingsDialog(QDialog):
 
         modeId = current.data(Qt.ItemDataRole.UserRole)
         try:
-            userModes.delete_mode(modeId)
+            user_modes.delete_mode(modeId)
             self.refresh_mods()
         except RuntimeError as e:
             QMessageBox.warning(self, "Hata", str(e))
