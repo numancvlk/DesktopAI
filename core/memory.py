@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List
 
 from .config import get_settings
+from . import user_modes
 
 
 def get_db_path() -> str:
@@ -40,6 +41,7 @@ def init_db() -> None:
         )
         conn.commit()
         conn.close()
+        user_modes.init_modes_table()
     except:
         raise RuntimeError("Database error")
 
