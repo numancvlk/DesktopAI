@@ -3,6 +3,7 @@ import json
 import requests
 from typing import Any, Dict, List
 from .config import get_settings
+from . import user_modes
 
 
 def build_system_prompt() -> str:
@@ -43,13 +44,35 @@ def build_system_prompt() -> str:
         response: Her zaman tek cümle Türkçe, düz metin (markdown/emoji yok)."""
 
 
+def build_user_modes() -> str:
+    mods = user_modes.get_all_modes()
+
+    if not mods:
+        return ""
+
+    names = [m.get("name", "").strip() for m in mods if m.get("name")]
+
+    if not names:
+        return ""
+
+    names = ", ".join(f'"{n}"' for n in names)
+
+    return f"""
+        KULLANICI MODLARI (activate_mode): Kullanıcı şu modları tanımladı: {names}. Kullanıcı bir modu açmak istediğinde (ör. "çalışma modunu aç", "iş modunu başlat", "X modu") MUTLAKA command: "activate_mode", parameters: {{"mode_name": "mod_adı"}} ver. Mod adını kullanıcı tanımına göre yaz. response: "[Mod adı] modunu açıyorum."
+        """
+
+
 def build_rag_system_prompt() -> str:
     return """PDF asistan. Sadece --- arasındaki kaynağa göre cevap. Kaynakta varsa kopyala, yoksa "Bu PDF'te bu bilgi yer almıyor." Kısa Türkçe, İngilizce/markdown yok. Doğrudan cevap."""
 
 
 def build_messages(history: List[dict], user_input: str) -> List[Dict[str, str]]:  # TODO Burda history ekledik ama daha kullanmadik  tam oalrak halledilcek ama sonra
+    systemCon = build_system_prompt()
+    modesRule = build_user_modes()
+    if modesRule:
+        systemCon = systemCon.rstrip() + modesRule
     messages: List[Dict[str, str]] = [
-        {"role": "system", "content": build_system_prompt()}
+        {"role": "system", "content": systemCon}
     ]
     for item in history:
         role = item.get("role", "user")

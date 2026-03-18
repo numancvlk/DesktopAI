@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 from .config import get_settings
 from . import reminders
+from . import user_modes
 
 SAFE_APP_PATTERN = re.compile(r"^[a-zA-Z0-9\u00c0-\u024f\s\-_.]{1,80}$")
 FORBIDDEN_APP = (
@@ -275,7 +276,7 @@ def parse_reminder_time(raw: Any) -> datetime:
 
 
 class SafeExecutor:
-    ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder", "organize_desktop"}
+    ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder", "organize_desktop", "activate_mode"}
 
     def execute(self, command: str, parameters: Dict[str, Any]) -> Optional[str]:
         cmd = (command or "").strip().lower()
@@ -305,6 +306,33 @@ class SafeExecutor:
 
         if cmd == "organize_desktop":
             return organize_desktop()
+
+        if cmd == "activate_mode": #TODO buna uygulama acma disindada bir seyler yapabilirim ama simdilik tez icin yeter bu kadar
+            modeName = parameters.get("mode_name") if isinstance(parameters, dict) else None
+            if not isinstance(modeName, str) or not modeName.strip():
+                raise RuntimeError("Mod adi belirtilmedi")
+
+            mode = user_modes.get_mode_name(modeName.strip())
+            if mode is None:
+                raise RuntimeError(f"'{modeName.strip()}' modu bulunamadi")
+
+            appNames = mode.get("app_names") or []
+            if not appNames:
+                raise RuntimeError(f"'{mode.get('name', modeName)}' modunda acilacak uygulama yok")
+
+            from .local_intents import resolve_app_name
+
+            for app in appNames:
+                if not isinstance(app, str) or not safe_app_name(app):
+                    continue
+                resolved = resolve_app_name(app.strip())
+                try:
+                    open_via_start_menu(resolved)
+                except Exception:
+                    pass
+                time.sleep(0.7)
+
+            return None
 
         if cmd == "set_reminder": #TODO KONTROL EDILECEK HATIRLATMA CALISMIYOR
             if not isinstance(parameters, dict):

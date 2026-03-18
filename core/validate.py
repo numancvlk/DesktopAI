@@ -93,6 +93,7 @@ class IntentParser:
             "screenshot",
             "set_reminder",
             "organize_desktop",
+            "activate_mode",
         ) else "none"
         params = data.get("parameters")
         data["parameters"] = dict(params) if isinstance(params, dict) else {}
@@ -106,7 +107,7 @@ class IntentParser:
 
 
 class SecurityValidator:
-    ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder", "organize_desktop"}
+    ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder", "organize_desktop", "activate_mode"}
     FORBIDDEN_KEYWORDS = (
         "powershell",
         "get-startapps",
@@ -160,6 +161,12 @@ class SecurityValidator:
 
         if normalized.command == "none":
             normalized.parameters = {}
+        elif normalized.command == "activate_mode":
+            modeName = (normalized.parameters.get("modeName") or "").strip()
+            if not modeName:
+                normalized.command = "none"
+                normalized.parameters = {}
+                normalized.response = self.sanitize_response("Hangi modu açmamı istiyorsun?")
 
         return normalized
 
