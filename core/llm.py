@@ -7,10 +7,12 @@ from .config import get_settings
 
 def build_system_prompt() -> str:
     return """Sen masaüstü asistanısın. Yanıtın SADECE tek JSON nesnesi olsun, başka metin yazma.
+        DÜŞÜNME YAPMA. Açıklama, <think>, reasoning veya ek metin YAZMA. İlk çıktın doğrudan JSON olsun.
 
         Format: {"intent": "...", "command": "...", "parameters": {}, "response": "..."}
 
-        ZORUNLU KURAL - Aç komutu: Kullanıcı mesajında "ac", "aç", "open", "açı" veya açmak anlamı varsa MUTLAKA command: "open_app" ver, app_name olarak uygulama adını yaz. ASLA "ne yapmamı istiyorsun?" diye sorma.
+        ZORUNLU KURAL - Aç komutu: Kullanıcı mesajında "ac", "aç", "open", "açı" veya açmak anlamı varsa MUTLAKA command: "open_app" ver, app_name olarak uygulama adını yaz. ASLA "ne yapmamı istiyorsun?" veya "Hangi uygulamayı açayım?" deme.
+        TAKİP KURALI: Kullanıcı SADECE "aç"/"ac"/"open" yazdıysa, ÖNCEKİ mesajlardaki (özellikle bir önceki user mesajındaki) uygulama adını kullan. Örn. önceki "calculator" + şimdi "aç" -> app_name: "calculator".
         - "hesap makinesi ac" -> {"intent": "open_app", "command": "open_app", "parameters": {"app_name": "hesap makinesi"}, "response": "Hesap makinesini açıyorum."}
 
         ZORUNLU KURAL - Ekran görüntüsü (ÖNCELİKLİ): "screenshot", "screencapture", "screen capture", "ekran goruntusu", "ekran görüntüsü", "ekrani kaydet", "ekranı kaydet", "ekran al", "ekran goster" gibi ifadeler ASLA uygulama adı değildir. Bu durumda MUTLAKA command: "screenshot", parameters: {}, response: "Ekran görüntüsünü alıp masaüstüne kaydettim." ver. Bu isteklerde ASLA "ne yapmamı istiyorsun?" veya "Açmamı mı?" deme.

@@ -8,7 +8,7 @@ from core.action import SafeExecutor
 from core.validate import IntentParser, IntentParserError, SecurityValidator
 from core.config import get_settings
 from core.rag import retrieve_relevant_chunks, build_augmented_user_input
-from core.local_intents import detect_local_intent
+from core.local_intents import detect_local_intent, resolve_app_name
 
 
 def normalize_text_for_time(text: str) -> str:
@@ -24,7 +24,7 @@ def normalize_text_for_time(text: str) -> str:
     return lowered
 
 
-def override_relative_reminder_time(user_text: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+def relative_reminder_time(user_text: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
     normalized = normalize_text_for_time(user_text)
 
     match = re.search(r"(\d+)\s*(saniye|sn|dakika|dk|saat)\s*sonra", normalized)
@@ -137,10 +137,14 @@ class LLMWorker(QThread): #LLM Worker
                 parameters = normalized.parameters
 
                 if command == "set_reminder":
-                    parameters = override_relative_reminder_time(self.userInput, parameters)
+                    parameters = relative_reminder_time(self.userInput, parameters)
 
                 displayResponse = normalized.response or "Anladım, devam edelim."
 
+
+            if command == "open_app" and isinstance(parameters, dict) and parameters.get("app_name"):
+                parameters = dict(parameters)
+                parameters["app_name"] = resolve_app_name(parameters["app_name"])
 
             try:
                 executor = SafeExecutor()

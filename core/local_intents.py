@@ -259,17 +259,25 @@ def detect_local_intent(text: str) -> Optional[Dict[str, Any]]:
         appName = extract_open_app_name(normalized)
         appName = resolve_app_name(appName)
         if not appName:
-            return {
-                "command": "none",
-                "parameters": {},
-                "response": "Hangi uygulamayı açayım?",
-                "normalized": normalized,
-            }
+            return None
         if appName and safe_app_name(appName):
             return {
                 "command": "open_app",
                 "parameters": {"app_name": appName},
                 "response": f"{appName.title()} açıyorum.",
+                "normalized": normalized,
+            }
+
+    tokens = [t for t in normalized.split() if t and t not in FILLER_WORDS]
+    
+    if len(tokens) <= 2:
+        resolved = resolve_app_name(" ".join(tokens))
+        knownapps = set(APP_ALIASES.values())
+        if resolved and resolved in knownapps and safe_app_name(resolved):
+            return {
+                "command": "none",
+                "parameters": {},
+                "response": f"{resolved.title()} ile ne yapmamı istiyorsun? Açmamı mı?",
                 "normalized": normalized,
             }
 
