@@ -129,7 +129,12 @@ class SecurityValidator:
     MARKUP_PATTERN = re.compile(r"[*_`#\[\]]")
 
     def validate(self, intent: IntentModel) -> IntentModel: #Guvenlik kontrolu yapiyoruz
-        normalized = intent.copy()
+        normalized = IntentModel(
+            intent=intent.intent,
+            command=intent.command,
+            parameters=dict(intent.parameters),
+            response=intent.response,
+        )
 
         normalized.command = normalized.command.strip().lower()
         if not normalized.command:
@@ -162,7 +167,7 @@ class SecurityValidator:
         if normalized.command == "none":
             normalized.parameters = {}
         elif normalized.command == "activate_mode":
-            modeName = (normalized.parameters.get("modeName") or "").strip()
+            modeName = (normalized.parameters.get("mode_name") or "").strip()
             if not modeName:
                 normalized.command = "none"
                 normalized.parameters = {}

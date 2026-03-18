@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 from ui.workers import LLMWorker
 from ui.voice_workers import VoiceListenWorker
 from ui.rag_workers import RAGIndexWorker
+from ui.settings import SettingsDialog
 from core import reminders
 import datetime
 
@@ -343,6 +344,11 @@ class MainScreen(QMainWindow):
         headerRow.addLayout(modeRow)
         headerRow.addStretch()
 
+        self.settingsButton = QPushButton("Ayarlar")
+        self.settingsButton.setToolTip("Ayarları aç")
+        self.settingsButton.clicked.connect(self.on_settings_clicked)
+        headerRow.addWidget(self.settingsButton, alignment=Qt.AlignRight | Qt.AlignVCenter)
+
         self.statusLabel = QLabel("Mod: Asistan")
         self.statusLabel.setObjectName("StatusLabel")
         headerRow.addWidget(self.statusLabel, alignment=Qt.AlignRight | Qt.AlignVCenter)
@@ -557,6 +563,10 @@ class MainScreen(QMainWindow):
         self.statusLabel.setText(f"Mod: {self.mode_name()} • Hazır")
         self.pdfButton.setEnabled(True)
         self.ragWorker = None
+
+    def on_settings_clicked(self) -> None:
+        dlg = SettingsDialog(parent=self)
+        dlg.exec()
 
     def on_mode_assistant_clicked(self):
         if self.currentMode == "assistant":

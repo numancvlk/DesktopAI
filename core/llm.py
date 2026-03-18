@@ -12,13 +12,15 @@ def build_system_prompt() -> str:
 
         Format: {"intent": "...", "command": "...", "parameters": {}, "response": "..."}
 
-        ZORUNLU KURAL - Aç komutu: Kullanıcı mesajında "ac", "aç", "open", "açı" veya açmak anlamı varsa MUTLAKA command: "open_app" ver, app_name olarak uygulama adını yaz. ASLA "ne yapmamı istiyorsun?" veya "Hangi uygulamayı açayım?" deme.
-        TAKİP KURALI: Kullanıcı SADECE "aç"/"ac"/"open" yazdıysa, ÖNCEKİ mesajlardaki (özellikle bir önceki user mesajındaki) uygulama adını kullan. Örn. önceki "calculator" + şimdi "aç" -> app_name: "calculator".
-        - "hesap makinesi ac" -> {"intent": "open_app", "command": "open_app", "parameters": {"app_name": "hesap makinesi"}, "response": "Hesap makinesini açıyorum."}
+        ZORUNLU KURAL - MOD vs UYGULAMA AYIRIMI: "X modu" veya "X" (X kullanıcının tanımladığı modlardan biri ise) ASLA open_app değil, activate_mode kullan. Mod isimleri aşağıda belirtilir.
+        ZORUNLU KURAL - Aç komutu (sadece uygulama için): Kullanıcı mesajında "ac", "aç", "open" varsa VE bir MOD değilse (notepad, chrome, hesap makinesi gibi uygulama) MUTLAKA command: "open_app" ver.
+        TAKİP KURALI: Kullanıcı SADECE "aç"/"ac"/"open" yazdıysa, ÖNCEKİ mesajlardaki uygulama adını kullan.
+        - "hesap makinesi ac" -> open_app (uygulama)
+        - "oyun modu" veya "oyun modunu aç" -> activate_mode (mod, open_app DEĞİL)
 
-        ZORUNLU KURAL - Ekran görüntüsü (ÖNCELİKLİ): "screenshot", "screencapture", "screen capture", "ekran goruntusu", "ekran görüntüsü", "ekrani kaydet", "ekranı kaydet", "ekran al", "ekran goster" gibi ifadeler ASLA uygulama adı değildir. Bu durumda MUTLAKA command: "screenshot", parameters: {}, response: "Ekran görüntüsünü alıp masaüstüne kaydettim." ver. Bu isteklerde ASLA "ne yapmamı istiyorsun?" veya "Açmamı mı?" deme.
+        ZORUNLU KURAL - Ekran görüntüsü (ÖNCELİKLİ): "screenshot", "ekran goruntusu", "ekran al" vb. ASLA uygulama değildir. command: "screenshot".
 
-        Sadece eksik eylem: Kullanıcı SADECE bir uygulama adı yazdı (yukarıdaki ekran görüntüsü ifadeleri HARİÇ), "ac/aç/open" YOK (örn. sadece "hesap makinesi") -> command: "none", parameters: {}, response: "[Uygulama] ile ne yapmamı istiyorsun? Açmamı mı?"
+        Sadece eksik eylem (uygulama için): Kullanıcı SADECE uygulama adı yazdı ("modu" YOK, örn. "hesap makinesi") -> command: "none", response: "[Uygulama] ile ne yapmamı istiyorsun? Açmamı mı?"
 
         HATIRLATICI KURALLARI (set_reminder):
         - Kullanıcı gelecekte bir zamanda bir olayı hatırlatmanı isterse (örn. "yarın saat 9'da toplantı hatırlat", "20 dakika sonra ders çalışmayı hatırlat"), MUTLAKA command: "set_reminder" kullan.
@@ -45,7 +47,7 @@ def build_system_prompt() -> str:
 
 
 def build_user_modes() -> str:
-    mods = user_modes.get_all_modes()
+    mods = user_modes.get_modes()
 
     if not mods:
         return ""
@@ -58,7 +60,11 @@ def build_user_modes() -> str:
     names = ", ".join(f'"{n}"' for n in names)
 
     return f"""
-        KULLANICI MODLARI (activate_mode): Kullanıcı şu modları tanımladı: {names}. Kullanıcı bir modu açmak istediğinde (ör. "çalışma modunu aç", "iş modunu başlat", "X modu") MUTLAKA command: "activate_mode", parameters: {{"mode_name": "mod_adı"}} ver. Mod adını kullanıcı tanımına göre yaz. response: "[Mod adı] modunu açıyorum."
+        KULLANICI MODLARI (activate_mode) - ÖNCELİKLİ, open_app ile KARIŞTIRMA:
+        Kullanıcının tanımlı modları: {names}. Bunlar UYGULAMA DEĞİL, MOD dur. "X modu" veya "X" (X bu listede varsa) ASLA open_app değil, MUTLAKA activate_mode ver.
+        - "oyun modu", "oyun modunu aç", "çalışma modu", "çalışma modunu başlat" -> command: "activate_mode", parameters: {{"mode_name": "mod_adı"}}, response: "[Mod adı] modunu açıyorum."
+        - Mod adı yukarıdaki listede TAM EŞLEŞME veya benzer olmalı. Mod İSTEMİYORSA (sadece uygulama: notepad, chrome vb.) open_app kullan.
+        AYIRIM: "hesap makinesi aç" = open_app (uygulama). "oyun modu" veya "çalışma modunu aç" = activate_mode (mod).
         """
 
 
