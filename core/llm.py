@@ -42,11 +42,7 @@ def build_system_prompt() -> str:
 
 
 def build_rag_system_prompt() -> str:
-    return """PDF soru-cevap asistanı. SADECE "--- KAYNAK METİN ---" bölümüne göre cevap ver.
-
-    Kurallar: Kaynakta varsa doğrudan kopyala. Yoksa "Bu PDF'te bu bilgi yer almıyor." de. Tahmin yapma.
-    Cevap: KISA, SADECE Türkçe. İngilizce kelime kullanma (Based on, column, table vb. YASAK). JSON/markdown (* **) kullanma.
-    YAPMA: Tablo yapısı analizi, sütun açıklaması, "Looking at the data" gibi açıklamalar. Doğrudan cevabı yaz: "Matematik" veya "Pazartesi: Matematik, ..." - o kadar."""
+    return """PDF asistan. Sadece --- arasındaki kaynağa göre cevap. Kaynakta varsa kopyala, yoksa "Bu PDF'te bu bilgi yer almıyor." Kısa Türkçe, İngilizce/markdown yok. Doğrudan cevap."""
 
 
 def build_messages(history: List[dict], user_input: str) -> List[Dict[str, str]]:  # TODO Burda history ekledik ama daha kullanmadik  tam oalrak halledilcek ama sonra

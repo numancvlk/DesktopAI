@@ -5,15 +5,14 @@ import chromadb
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from .config import get_settings
-from .pdf_utils import extract_text_from_pdf, split_text_into_chunks
+from .pdf_utils import extract_text, split_text_chunks
 
 
 chromaClient: Optional[chromadb.Client] = None
 chromaCollection = None
 
-#HYPERPARAMATERS
 RETRIEVAL_FETCH = 3
-RAG_MAX_CHARS = 5000
+RAG_MAX_CHARS = 2000
 
 TURKISH_NORMALIZE = str.maketrans(
     "çğıöşüÇĞİÖŞÜ",
@@ -108,11 +107,11 @@ def index_pdf(file_path: str, metadata: Optional[Dict[str, Any]] = None) -> str:
     if not file_path:
         raise ValueError("PDF yolu boş olamaz.")
 
-    text = extract_text_from_pdf(file_path)
+    text = extract_text(file_path)
     if not text:
         raise RuntimeError("PDF'den metin çıkarılamadı.")
 
-    chunks = split_text_into_chunks(text)
+    chunks = split_text_chunks(text)
     if not chunks:
         raise RuntimeError("PDF için indekslenecek metin parçası bulunamadı.")
 
@@ -157,7 +156,7 @@ def retrieve_relevant_chunks(
 
     settings = get_settings()
     effectiveK = top_k if top_k is not None else settings.rag_top_k
-    effectiveK = max(effectiveK, 6)
+    effectiveK = max(effectiveK, 3)
     if effectiveK <= 0:
         return []
 
@@ -235,12 +234,8 @@ def build_augmented_user_input(
 
     limit = max_context_chars if max_context_chars is not None else RAG_MAX_CHARS
     lines: List[str] = []
-    lines.append(
-        "Aşağıdaki KAYNAK METİN bölümleri, sorunun cevabı için VERİLEN TEK KAYNAKTIR. "
-        "Cevabını SADECE bu metne dayanarak ver. Bu metinde olmayan hiçbir bilgiyi ekleme veya tahmin etme."
-    )
-    lines.append("")
-    lines.append("--- KAYNAK METİN ---")
+    lines.append("Kaynak: aşağıda. Kısa cevap ver.")
+    lines.append("---")
     lines.append("")
 
     total = 0
@@ -253,7 +248,7 @@ def build_augmented_user_input(
         if not text:
             continue
 
-        block = f"[Parça {idx} | Kaynak: {sourceName}]\n{text}"
+        block = f"[{idx}]\n{text}"
         blockLen = len(block) + 2
 
         if total + blockLen > limit:
@@ -262,9 +257,8 @@ def build_augmented_user_input(
         lines.append("")
         total += blockLen
 
-    lines.append("--- KAYNAK METİN SONU ---")
-    lines.append("")
-    lines.append("Kullanıcı sorusu (cevabını YALNIZCA yukarıdaki kaynak metne göre ver):")
+    lines.append("---")
+    lines.append("Soru:")
     lines.append(user_input.strip())
 
     return "\n".join(lines).strip()
