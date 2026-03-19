@@ -9,6 +9,7 @@ import pyperclip
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 from .config import get_settings
 from . import reminders
 from . import user_modes
@@ -43,7 +44,7 @@ def safe_app_name(name: str) -> bool:
     return True
 
 
-def open_via_start_menu(app_name: str) -> None:
+def open_start_menu(app_name: str) -> None:
     pyperclip.copy(app_name)
     time.sleep(0.05)
     pyautogui.press("win")
@@ -51,6 +52,62 @@ def open_via_start_menu(app_name: str) -> None:
     pyautogui.hotkey("ctrl", "v")
     time.sleep(0.5)
     pyautogui.press("enter")
+
+
+def normalize_url(raw_url: str) -> Optional[str]:
+    if not isinstance(raw_url, str):
+        return None
+
+    candidate = raw_url.strip()
+    if not candidate:
+        return None
+    if any(ch in candidate for ch in ("\r", "\n", "\t", " ")):
+        return None
+
+    if "://" not in candidate:
+        candidate = f"https://{candidate}"
+
+    parsed = urlparse(candidate)
+    if parsed.scheme not in {"http", "https"}:
+        return None
+    if not parsed.netloc:
+        return None
+
+    return parsed.geturl()
+
+
+def open_browser_links(browser_name: str, urls: list[str]) -> tuple[int, int]:
+    if not urls:
+        return 0, 0
+
+    targetBrowser = (browser_name or "").strip()
+    if not targetBrowser:
+        return 0, len(urls)
+    try:
+        open_start_menu(targetBrowser)
+    except Exception:
+        return 0, len(urls)
+
+    time.sleep(1.8)
+    opened = 0
+    failed = 0
+    for index, url in enumerate(urls):
+        try:
+            if index > 0:
+                pyautogui.hotkey("ctrl", "t")
+                time.sleep(0.25)
+            pyautogui.hotkey("ctrl", "l")
+            time.sleep(0.2)
+            pyperclip.copy(url)
+            time.sleep(0.05)
+            pyautogui.hotkey("ctrl", "v")
+            time.sleep(0.15)
+            pyautogui.press("enter")
+            opened += 1
+            time.sleep(0.5)
+        except Exception:
+            failed += 1
+    return opened, failed
 
 
 def screenshot_save_dir() -> Path:
@@ -296,7 +353,7 @@ class SafeExecutor:
             appName = appName.strip()
 
             try:
-                open_via_start_menu(appName)
+                open_start_menu(appName)
             except Exception:
                 raise RuntimeError("Uygulama acilamadi")
             return None
@@ -317,22 +374,52 @@ class SafeExecutor:
                 raise RuntimeError(f"'{modeName.strip()}' modu bulunamadi")
 
             appNames = mode.get("app_names") or []
-            if not appNames:
-                raise RuntimeError(f"'{mode.get('name', modeName)}' modunda acilacak uygulama yok")
+            linkUrls = mode.get("link_urls") or []
+            browserName = mode.get("browser_name") or ""
+            if not appNames and not linkUrls:
+                raise RuntimeError(f"'{mode.get('name', modeName)}' modunda acilacak uygulama veya site yok")
 
             from .local_intents import resolve_app_name
 
+            skippedInvalidLinks = 0
+            skippedDuplicateLinks = 0
+            seenLinks = set()
+            normalizedLinks: list[str] = []
+            for rawUrl in linkUrls:
+                normalized = normalize_url(rawUrl)
+                if not normalized:
+                    skippedInvalidLinks += 1
+                    continue
+                dedupeKey = normalized.lower()
+                if dedupeKey in seenLinks:
+                    skippedDuplicateLinks += 1
+                    continue
+                seenLinks.add(dedupeKey)
+                normalizedLinks.append(normalized)
+
+            resolvedBrowser = str(browserName).strip() if isinstance(browserName, str) else ""
+            if normalizedLinks and not safe_app_name(resolvedBrowser):
+                raise RuntimeError("Link acmak icin mod ayarinda gecerli bir tarayici belirtin")
+            openedLinks, failedLinks = open_browser_links(resolvedBrowser, normalizedLinks)
+
+            openedApps = 0
             for app in appNames:
                 if not isinstance(app, str) or not safe_app_name(app):
                     continue
                 resolved = resolve_app_name(app.strip())
                 try:
-                    open_via_start_menu(resolved)
+                    open_start_menu(resolved)
+                    openedApps += 1
                 except Exception:
                     pass
                 time.sleep(0.7)
 
-            return None
+            modeDisplayName = mode.get("name", modeName)
+            return (
+                f"'{modeDisplayName}' modu calisti: {openedApps} uygulama ve {openedLinks} site acildi "
+                f"(tarayici: {resolvedBrowser if resolvedBrowser else '(belirtilmedi)'}). "
+                f"Atlanan site: {skippedInvalidLinks + skippedDuplicateLinks}, acilamayan site: {failedLinks}."
+            )
 
         if cmd == "set_reminder": #TODO KONTROL EDILECEK HATIRLATMA CALISMIYOR
             if not isinstance(parameters, dict):

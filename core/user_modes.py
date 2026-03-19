@@ -21,6 +21,8 @@ def init_modes_table() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 app_names_json TEXT NOT NULL,
+                url_json TEXT NOT NULL DEFAULT '[]',
+                browser_name TEXT NOT NULL DEFAULT '',
                 createdAt TEXT NOT NULL
             )
             """
@@ -53,7 +55,36 @@ def serialize_app(app_names: List[str]) -> str:
     return json.dumps(cleaned, ensure_ascii=False)
 
 
-def create_mode(name: str, app_names: List[str]) -> int:
+def parse_link(url_json: str) -> List[str]:
+    if not url_json or not url_json.strip():
+        return []
+
+    try:
+        parsed = json.loads(url_json)
+
+        if not isinstance(parsed, list):
+            return []
+
+        return [str(u).strip() for u in parsed if isinstance(u, str) and u.strip()]
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
+def serialize_link(link_urls: List[str]) -> str:
+    cleaned = [str(u).strip() for u in link_urls if u and isinstance(u, str) and str(u).strip()]
+    return json.dumps(cleaned, ensure_ascii=False)
+
+
+def clean_browserN(browser_name: Optional[str]) -> str:
+    return (browser_name or "").strip()
+
+
+def create_mode(
+    name: str,
+    app_names: List[str],
+    link_urls: Optional[List[str]] = None,
+    browser_name: Optional[str] = None,
+) -> int:
     dbPath = get_db_path()
     createdAt = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     nameClean = (name or "").strip()
@@ -61,15 +92,17 @@ def create_mode(name: str, app_names: List[str]) -> int:
         raise RuntimeError("Mod adi bos olamaz")
 
     appJson = serialize_app(app_names or [])
+    linksJson = serialize_link(link_urls or [])
+    browserName = clean_browserN(browser_name)
 
     try:
         conn = sqlite3.connect(dbPath)
         cursor = conn.execute(
             """
-            INSERT INTO user_modes (name, app_names_json, createdAt)
-            VALUES (?, ?, ?)
+            INSERT INTO user_modes (name, app_names_json, url_json, browser_name, createdAt)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (nameClean, appJson, createdAt),
+            (nameClean, appJson, linksJson, browserName, createdAt),
         )
         modeId = cursor.lastrowid
         conn.commit()
@@ -79,23 +112,31 @@ def create_mode(name: str, app_names: List[str]) -> int:
         raise RuntimeError("Mod kaydedilemedi")
 
 
-def update_mode(modeId: int, name: str, app_names: List[str]) -> None:
+def update_mode(
+    modeId: int,
+    name: str,
+    app_names: List[str],
+    link_urls: Optional[List[str]] = None,
+    browser_name: Optional[str] = None,
+) -> None:
     dbPath = get_db_path()
     nameClean = (name or "").strip()
     if not nameClean:
         raise RuntimeError("Mod adi bos olamaz")
 
     appJson = serialize_app(app_names or [])
+    linksJson = serialize_link(link_urls or [])
+    browserName = clean_browserN(browser_name)
 
     try:
         conn = sqlite3.connect(dbPath)
         conn.execute(
             """
             UPDATE user_modes
-            SET name = ?, app_names_json = ?
+            SET name = ?, app_names_json = ?, url_json = ?, browser_name = ?
             WHERE id = ?
             """,
-            (nameClean, appJson, int(modeId)),
+            (nameClean, appJson, linksJson, browserName, int(modeId)),
         )
         conn.commit()
         conn.close()
@@ -123,7 +164,7 @@ def delete_mode(modeId: int) -> None:
 def get_modes(limit: Optional[int] = None) -> List[Dict[str, Any]]:
     dbPath = get_db_path()
     query = """
-        SELECT id, name, app_names_json, createdAt
+        SELECT id, name, app_names_json, url_json, browser_name, createdAt
         FROM user_modes
         ORDER BY name ASC
     """
@@ -143,6 +184,8 @@ def get_modes(limit: Optional[int] = None) -> List[Dict[str, Any]]:
                 "id": row["id"],
                 "name": row["name"],
                 "app_names": parse_app(row["app_names_json"] or ""),
+                "link_urls": parse_link(row["url_json"] or ""),
+                "browser_name": clean_browserN(row["browser_name"] if "browser_name" in row.keys() else None),
                 "createdAt": row["createdAt"],
             }
             for row in rows
@@ -158,7 +201,7 @@ def get_mode_id(modeId: int) -> Optional[Dict[str, Any]]:
         conn.row_factory = sqlite3.Row
         cursor = conn.execute(
             """
-            SELECT id, name, app_names_json, createdAt
+            SELECT id, name, app_names_json, url_json, browser_name, createdAt
             FROM user_modes
             WHERE id = ?
             """,
@@ -172,6 +215,8 @@ def get_mode_id(modeId: int) -> Optional[Dict[str, Any]]:
             "id": row["id"],
             "name": row["name"],
             "app_names": parse_app(row["app_names_json"] or ""),
+            "link_urls": parse_link(row["url_json"] or ""),
+            "browser_name": clean_browserN(row["browser_name"] if "browser_name" in row.keys() else None),
             "createdAt": row["createdAt"],
         }
     except Exception:

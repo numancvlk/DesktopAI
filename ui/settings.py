@@ -121,6 +121,8 @@ class ModEditDialog(QDialog):
         modeId: Optional[int] = None,
         initial_name: str = "",
         initial_apps: Optional[List[str]] = None,
+        initial_links: Optional[List[str]] = None,
+        initial_browser: str = "",
     ) -> None:
         super().__init__(parent)
         self.modeId = modeId
@@ -129,9 +131,15 @@ class ModEditDialog(QDialog):
         self.setMinimumWidth(420)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setStyleSheet(SETTINGS_STYLESHEET)
-        self.build_ui(initial_name, initial_apps or [])
+        self.build_ui(initial_name, initial_apps or [], initial_links or [], initial_browser)
 
-    def build_ui(self, initial_name: str, initial_apps: List[str]) -> None:
+    def build_ui(
+        self,
+        initial_name: str,
+        initial_apps: List[str],
+        initial_links: List[str],
+        initial_browser: str,
+    ) -> None:
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         layout.setContentsMargins(18, 18, 18, 18)
@@ -167,6 +175,42 @@ class ModEditDialog(QDialog):
         removeRow.addStretch()
         layout.addLayout(removeRow)
 
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(line)
+
+        layout.addWidget(QLabel("Acilmasini istediğiniz siteler"))
+        self.linkList = QListWidget()
+        for link in initial_links:
+            self.linkList.addItem(link)
+        layout.addWidget(self.linkList, stretch=1)
+
+        addLinkRow = QHBoxLayout()
+        self.linkInput = QLineEdit()
+        self.linkInput.setPlaceholderText("https://example.com")
+        self.linkInput.returnPressed.connect(self.add_link)
+        addLinkRow.addWidget(self.linkInput)
+        addLinkBtn = QPushButton("Ekle")
+        addLinkBtn.setObjectName("PrimaryButton")
+        addLinkBtn.clicked.connect(self.add_link)
+        addLinkRow.addWidget(addLinkBtn)
+        layout.addLayout(addLinkRow)
+
+        removeLinkRow = QHBoxLayout()
+        removeLinkBtn = QPushButton("Sil")
+        removeLinkBtn.setToolTip("Secili siteyi listeden cikar")
+        removeLinkBtn.clicked.connect(self.remove_link)
+        removeLinkRow.addWidget(removeLinkBtn)
+        removeLinkRow.addStretch()
+        layout.addLayout(removeLinkRow)
+
+        layout.addWidget(QLabel("Linklerin acilacagi tarayici:"))
+        self.browserInput = QLineEdit()
+        self.browserInput.setPlaceholderText("")
+        self.browserInput.setText((initial_browser or "").strip())
+        layout.addWidget(self.browserInput)
+
         btnRow = QHBoxLayout()
         btnRow.addStretch()
         cancelBtn = QPushButton("İptal")
@@ -190,6 +234,18 @@ class ModEditDialog(QDialog):
         if row >= 0:
             self.appList.takeItem(row)
 
+    def add_link(self) -> None:
+        text = self.linkInput.text().strip()
+        if not text:
+            return
+        self.linkList.addItem(text)
+        self.linkInput.clear()
+
+    def remove_link(self) -> None:
+        row = self.linkList.currentRow()
+        if row >= 0:
+            self.linkList.takeItem(row)
+
     def save(self) -> None:
         name = self.nameEdit.text().strip()
         if not name:
@@ -202,11 +258,18 @@ class ModEditDialog(QDialog):
             if item and item.text().strip():
                 apps.append(item.text().strip())
 
+        links: List[str] = []
+        for i in range(self.linkList.count()):
+            item = self.linkList.item(i)
+            if item and item.text().strip():
+                links.append(item.text().strip())
+        browserName = self.browserInput.text().strip()
+
         try:
             if self.modeId is not None:
-                user_modes.update_mode(self.modeId, name, apps)
+                user_modes.update_mode(self.modeId, name, apps, links, browserName)
             else:
-                user_modes.create_mode(name, apps)
+                user_modes.create_mode(name, apps, links, browserName)
             self.accept()
         except RuntimeError as e:
             QMessageBox.warning(self, "Hata", str(e))
@@ -220,6 +283,16 @@ class ModEditDialog(QDialog):
             for i in range(self.appList.count())
             if self.appList.item(i) and self.appList.item(i).text().strip()
         ]
+
+    def get_url(self) -> List[str]:
+        return [
+            self.linkList.item(i).text().strip()
+            for i in range(self.linkList.count())
+            if self.linkList.item(i) and self.linkList.item(i).text().strip()
+        ]
+
+    def get_browser(self) -> str:
+        return self.browserInput.text().strip()
 
 
 class SettingsDialog(QDialog):
@@ -258,10 +331,18 @@ class SettingsDialog(QDialog):
         self.modList.itemSelectionChanged.connect(self.mod_selection_changed)
         layout.addWidget(self.modList, stretch=1)
 
-        self.appPreviewLabel = QLabel("Seçili modun uygulamaları: -")
+        self.appPreviewLabel = QLabel("Seçili modun uygulamaları")
         self.appPreviewLabel.setObjectName("StatusLabel")
         self.appPreviewLabel.setStyleSheet("color: #9ca3af; font-size: 11px;")
         layout.addWidget(self.appPreviewLabel)
+        self.linkPreviewLabel = QLabel("Seçili modun siteleri: -")
+        self.linkPreviewLabel.setObjectName("StatusLabel")
+        self.linkPreviewLabel.setStyleSheet("color: #9ca3af; font-size: 11px;")
+        layout.addWidget(self.linkPreviewLabel)
+        self.browserPreviewLabel = QLabel("Seçili modun tarayicisi: -")
+        self.browserPreviewLabel.setObjectName("StatusLabel")
+        self.browserPreviewLabel.setStyleSheet("color: #9ca3af; font-size: 11px;")
+        layout.addWidget(self.browserPreviewLabel)
 
         btnRow = QHBoxLayout()
         self.addBtn = QPushButton("Ekle")
@@ -300,7 +381,9 @@ class SettingsDialog(QDialog):
         self.deleteBtn.setEnabled(hasSelect)
 
         if not hasSelect:
-            self.appPreviewLabel.setText("Seçili modun uygulamaları: -")
+            self.appPreviewLabel.setText("Seçili modun uygulamaları")
+            self.linkPreviewLabel.setText("Seçili modun siteleri")
+            self.browserPreviewLabel.setText("Seçili modun tarayicisi")
             return
 
         modeId = current.data(Qt.ItemDataRole.UserRole)
@@ -308,13 +391,23 @@ class SettingsDialog(QDialog):
             mode = user_modes.get_mode_id(modeId)
             if mode:
                 apps = mode.get("app_names", [])
+                links = mode.get("link_urls", [])
+                browser = mode.get("browser_name", "") or "(belirtilmedi)"
                 self.appPreviewLabel.setText(
                     f"Seçili modun uygulamaları: {', '.join(apps) if apps else '(yok)'}"
                 )
+                self.linkPreviewLabel.setText(
+                    f"Seçili modun siteleri: {', '.join(links) if links else '(yok)'}"
+                )
+                self.browserPreviewLabel.setText(f"Seçili modun tarayicisi: {browser}")
             else:
-                self.appPreviewLabel.setText("Seçili modun uygulamaları: -")
+                self.appPreviewLabel.setText("Seçili modun uygulamaları")
+                self.linkPreviewLabel.setText("Seçili modun siteleri")
+                self.browserPreviewLabel.setText("Seçili modun tarayicisi")
         except RuntimeError:
-            self.appPreviewLabel.setText("Seçili modun uygulamaları: -")
+            self.appPreviewLabel.setText("Seçili modun uygulamaları")
+            self.linkPreviewLabel.setText("Seçili modun siteleri")
+            self.browserPreviewLabel.setText("Seçili modun tarayicisi")
 
     def add_mode(self) -> None:
         dlg = ModEditDialog(parent=self)
@@ -335,6 +428,8 @@ class SettingsDialog(QDialog):
                 modeId=modeId,
                 initial_name=mode.get("name", ""),
                 initial_apps=mode.get("app_names", []),
+                initial_links=mode.get("link_urls", []),
+                initial_browser=mode.get("browser_name", ""),
             )
             if dlg.exec() == QDialog.Accepted:
                 self.refresh_mods()
