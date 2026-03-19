@@ -14,11 +14,13 @@ from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout as QDialogVBoxLayout,
 )
+import threading
 from ui.workers import LLMWorker
 from ui.voice_workers import VoiceListenWorker
 from ui.rag_workers import RAGIndexWorker
 from ui.settings import SettingsDialog
 from core import reminders
+from voice.stt import get_stt_model
 import datetime
 
 
@@ -143,6 +145,7 @@ class MainScreen(QMainWindow):
         self.currentMode = "assistant"
         self.reminderTimer = None
         self.build_ui()
+        threading.Thread(target=get_stt_model, daemon=True).start()
 
     def build_ui(self): 
         self.setWindowTitle("Desktop Assistant")

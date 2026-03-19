@@ -4,6 +4,7 @@ import tempfile
 import wave
 import numpy as np
 import sounddevice as sd
+import threading
 
 from pathlib import Path
 from typing import Optional
@@ -12,17 +13,20 @@ from core.config import get_settings
 from core.local_intents import normalize_spoken_command
 
 stt_model: Optional[WhisperModel] = None
+stt_load = threading.Lock()
 
 def get_stt_model() -> WhisperModel:
     global stt_model
 
     if stt_model is None:
-        settings = get_settings()
-        stt_model = WhisperModel(
-            settings.stt_model,
-            device="cpu",
-            compute_type=settings.stt_compute_type,
-        )
+        with stt_load:
+            if stt_model is None:
+                settings = get_settings()
+                stt_model = WhisperModel(
+                    settings.stt_model,
+                    device="cpu",
+                    compute_type=settings.stt_compute_type,
+                )
 
     return stt_model
 
@@ -92,30 +96,30 @@ def record_audio(duration_seconds: float | None = None) -> str:
  
  
 def transcribe_audio(audio_path: str) -> str:
-     if not audio_path:
-         raise ValueError("audio_path boş olamaz.")
- 
-     path = Path(audio_path)
+    if not audio_path:
+        raise ValueError("audio_path boş olamaz.")
 
-     if not path.is_file():
-         raise FileNotFoundError(f"Ses dosyası bulunamadı {audio_path} hatasi")
- 
-     settings = get_settings()
-     model = get_stt_model()
- 
-     segments, _ = model.transcribe(
-         str(path),
-         language=settings.stt_language,
-         beam_size=int(settings.stt_beam_size),
-        vad_filter=True,
-         initial_prompt=(
-             "Komutları Türkçe algıla. Uygulama adlarında steam ve whatsapp gibi uygulamaların adlarını "
-             "kelimelerini doğru yaz."
-         ),
-     )
- 
-     transcriptParts = [segment.text for segment in segments]
-     transcript = "".join(transcriptParts).strip()
-     correctedTranscript = normalize_spoken_command(transcript)
-     return correctedTranscript
+    path = Path(audio_path)
+
+    if not path.is_file():
+        raise FileNotFoundError(f"Ses dosyası bulunamadı {audio_path} hatasi")
+
+    settings = get_settings()
+    model = get_stt_model()
+
+    segments, _ = model.transcribe(
+        str(path),
+        language=settings.stt_language,
+        beam_size=int(settings.stt_beam_size),
+        vad_filter=False,
+        initial_prompt=(
+            "Komutları Türkçe algıla. "
+            "kelimelerini doğru yaz."
+        ),
+    )
+
+    transcriptParts = [segment.text for segment in segments]
+    transcript = " ".join(transcriptParts).strip()
+    correctedTranscript = normalize_spoken_command(transcript)
+    return correctedTranscript
  
