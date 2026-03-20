@@ -5,41 +5,42 @@ from typing import List, Optional, Dict, Any
 from .memory import get_db_path
 
 
-def init_reminders_table() -> None:
-    dbPath = get_db_path()
+# def init_reminders_table() -> None:
+#     # NOT: Bu fonksiyon reminders tablosunu oluşturmaya yarar.
+#     # Ancak mevcut projede `core/memory.py` içinde reminders tablosu zaten oluşturuluyor.
+#     # O yüzden bu fonksiyon şu an pratikte kullanılmıyor olabilir.
+#     dbPath = get_db_path()
 
-    try:
-        conn = sqlite3.connect(dbPath)
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS reminders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                text TEXT NOT NULL,
-                dueAt TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'pending',
-                repeatRule TEXT,
-                createdAt TEXT NOT NULL
-            )
-            """
-        )
-        conn.commit()
-        conn.close()
+#     try:
+#         conn = sqlite3.connect(dbPath)
+#         conn.execute(
+#             """
+#             CREATE TABLE IF NOT EXISTS reminders (
+#                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+#                 text TEXT NOT NULL,
+#                 dueAt TEXT NOT NULL,
+#                 status TEXT NOT NULL DEFAULT 'pending',
+#                 repeatRule TEXT,
+#                 createdAt TEXT NOT NULL
+#             )
+#             """
+#         )
+#         conn.commit()
+#         conn.close()
 
-    except Exception:
-        raise RuntimeError("Hatirlayici tablosu olusturulamadi")
+#     except Exception:
+#         raise RuntimeError("Hatirlayici tablosu olusturulamadi")
 
 
-def create_reminder(
+def create_reminder( #hatirlaticiyi olusturup db ye yazar
     text: str,
     due_at: datetime.datetime,
     repeat_rule: Optional[str] = None,
 ) -> int:
 
     dbPath = get_db_path()
-
-    created_at = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    due_at_str = due_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+    createdAt = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    dueAtStr = due_at.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     try:
         conn = sqlite3.connect(dbPath)
@@ -48,17 +49,19 @@ def create_reminder(
             INSERT INTO reminders (text, dueAt, status, repeatRule, createdAt)
             VALUES (?, ?, 'pending', ?, ?)
             """,
-            (text.strip(), due_at_str, repeat_rule, created_at),
+            (text.strip(), dueAtStr, repeat_rule, createdAt),
         )
-        reminder_id = cursor.lastrowid
+
+        reminderId = cursor.lastrowid
         conn.commit()
         conn.close()
-        return int(reminder_id)
+        return int(reminderId)
+        
     except Exception:
         raise RuntimeError("Hatirlayici kaydedilemedi")
 
 
-def get_due_reminders(now: Optional[datetime.datetime] = None) -> List[Dict[str, Any]]:
+def get_due_reminders(now: Optional[datetime.datetime] = None) -> List[Dict[str, Any]]: #pending ve zamani gelen hatirlaticilari verir
     if now is None:
         now = datetime.datetime.utcnow()
 
@@ -77,6 +80,7 @@ def get_due_reminders(now: Optional[datetime.datetime] = None) -> List[Dict[str,
             """,
             (now_str,),
         )
+
         rows = cursor.fetchall()
         conn.close()
         return [
@@ -94,8 +98,9 @@ def get_due_reminders(now: Optional[datetime.datetime] = None) -> List[Dict[str,
         raise RuntimeError("Hatirlayicilar okunamadi")
 
 
-def mark_reminder_done(reminder_id: int) -> None:
+def mark_reminder_done(reminderId: int) -> None: #biten hatirlaticiyi done yapar
     dbPath = get_db_path()
+
     try:
         conn = sqlite3.connect(dbPath)
         conn.execute(
@@ -104,7 +109,7 @@ def mark_reminder_done(reminder_id: int) -> None:
             SET status = 'done'
             WHERE id = ?
             """,
-            (int(reminder_id),),
+            (int(reminderId),),
         )
         conn.commit()
         conn.close()
@@ -112,9 +117,9 @@ def mark_reminder_done(reminder_id: int) -> None:
         raise RuntimeError("Hatirlayici guncellenemedi")
 
 
-def reschedule_reminder(reminder_id: int, new_due_at: datetime.datetime) -> None:
+def reschedule_reminder(reminderId: int, new_due_at: datetime.datetime) -> None: #hatirlaticiyi erteleyince devreye girer
     dbPath = get_db_path()
-    due_at_str = new_due_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+    dueAtStr = new_due_at.strftime("%Y-%m-%dT%H:%M:%SZ")
     try:
         conn = sqlite3.connect(dbPath)
         conn.execute(
@@ -123,14 +128,14 @@ def reschedule_reminder(reminder_id: int, new_due_at: datetime.datetime) -> None
             SET dueAt = ?, status = 'pending'
             WHERE id = ?
             """,
-            (due_at_str, int(reminder_id)),
+            (dueAtStr, int(reminderId)),
         )
         conn.commit()
         conn.close()
     except Exception:
         raise RuntimeError("Hatirlayici yeniden zamanlanamadi")
 
-def get_all_reminders(limit: Optional[int] = None) -> List[Dict[str, Any]]:
+def all_reminders(limit: Optional[int] = None) -> List[Dict[str, Any]]: #tum hatirlaticilari verir
     dbPath = get_db_path()
     query = """
         SELECT id, text, dueAt, status, repeatRule, createdAt

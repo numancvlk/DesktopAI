@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 from faster_whisper import WhisperModel
 from core.config import get_settings
-from core.local_intents import normalize_spoken_command
+from core.local_intents import normalize_mic
 
 stt_model: Optional[WhisperModel] = None
 stt_load = threading.Lock()
@@ -120,6 +120,6 @@ def transcribe_audio(audio_path: str) -> str:
 
     transcriptParts = [segment.text for segment in segments]
     transcript = " ".join(transcriptParts).strip()
-    correctedTranscript = normalize_spoken_command(transcript)
+    correctedTranscript = normalize_mic(transcript)
     return correctedTranscript
  

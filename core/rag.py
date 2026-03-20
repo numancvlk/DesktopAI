@@ -12,7 +12,7 @@ chromaClient: Optional[chromadb.Client] = None
 chromaCollection = None
 
 RETRIEVAL_FETCH = 3
-RAG_MAX_CHARS = 2000
+RAG_MAX_CHARS = 2000 # ragdan llm e gidecek max karakter limiti
 
 TURKISH_NORMALIZE = str.maketrans(
     "çğıöşüÇĞİÖŞÜ",
@@ -20,7 +20,7 @@ TURKISH_NORMALIZE = str.maketrans(
 )
 
 
-def normalize_for_tokens(text: str) -> str:
+def normalize_tokens(text: str) -> str: #turkce karakterleri kucultup benzerleriyle degistiriyoruz ustte zaten var neyin neyle degistirilecegi var
     if not text:
         return ""
     return text.strip().lower().translate(TURKISH_NORMALIZE)
@@ -30,12 +30,12 @@ def tokenize_overlap(text: str) -> set:
     if not text:
         return set()
 
-    normalized = normalize_for_tokens(text)
+    normalized = normalize_tokens(text)
     tokens = re.findall(r"[a-z0-9]+", normalized)
     return set(t for t in tokens if len(t) > 1)
 
 
-def keyword_score(queryTokens: set, chunk_text: str) -> float:
+def keyword_score(queryTokens: set, chunk_text: str) -> float: #inputtaki tokenlarla chunklardaki tokenlarin eslesmesi aslinda kelime eslesmesi
     if not queryTokens:
         return 0.0
 
@@ -65,11 +65,11 @@ def get_chromaCollection() -> chromadb.Client:
     return chromaCollection
 
 
-def init_rag_store() -> None:
+def init_rag_store() -> None: #Koleksiyonu olusturuyoruz vektor db yi
     _ = get_chromaCollection()
 
 
-def embed_text(text: str) -> List[float]:
+def embed_text(text: str) -> List[float]: #EMBEDDINGS kismina cagri yapiyoruz POST 
     if not text:
         raise ValueError("Embedding için metin boş olamaz.")
 
@@ -94,6 +94,7 @@ def embed_text(text: str) -> List[float]:
         raise RuntimeError("Embedding yaniti cozulemedi")
 
     embedding = data.get("embedding")
+
     if not isinstance(embedding, list):
         raise RuntimeError("Embedding geçersiz")
     return embedding
@@ -103,7 +104,7 @@ def embed_texts(texts: List[str]) -> List[List[float]]:
     return [embed_text(t) for t in texts]
 
 
-def index_pdf(file_path: str, metadata: Optional[Dict[str, Any]] = None) -> str:
+def index_pdf(file_path: str, metadata: Optional[Dict[str, Any]] = None) -> str: #PDF TEN METIN CIKAARIYORUZ CHUNKLARA BOLUP EMBEDDINGE CEVIRIP VEKTOR DB YE EKLIYORUZ
     if not file_path:
         raise ValueError("PDF yolu boş olamaz.")
 
@@ -118,7 +119,7 @@ def index_pdf(file_path: str, metadata: Optional[Dict[str, Any]] = None) -> str:
     pdfPath = Path(file_path).resolve()
 
     def norm(s: str) -> str:
-        t = normalize_for_tokens(s)
+        t = normalize_tokens(s)
         return t if t else s
 
     embeddings = embed_texts([norm(c) for c in chunks])
@@ -145,7 +146,7 @@ def index_pdf(file_path: str, metadata: Optional[Dict[str, Any]] = None) -> str:
     return str(pdfPath)
 
 
-def retrieve_relevant_chunks(
+def retrieve_chunks( #INPUTU EMBEDDINGE CEVIRIP VEKTOR DB YE SORUYORUZ EN BENZERLERINI GETIRIYTORUZ 
     query: str,
     top_k: Optional[int] = None,
     max_distance: Optional[float] = None,
@@ -157,11 +158,12 @@ def retrieve_relevant_chunks(
     settings = get_settings()
     effectiveK = top_k if top_k is not None else settings.rag_top_k
     effectiveK = max(effectiveK, 3)
+
     if effectiveK <= 0:
         return []
 
     fetchK = min(50, max(effectiveK * RETRIEVAL_FETCH, effectiveK + 5))
-    queryEmbed = normalize_for_tokens(query) or query
+    queryEmbed = normalize_tokens(query) or query
     queryEmbedding = embed_text(queryEmbed)
     collection = get_chromaCollection()
 
@@ -172,7 +174,7 @@ def retrieve_relevant_chunks(
             include=["documents", "metadatas", "distances"],
         )
     except Exception:
-        raise RuntimeError("RAG sorgusu çalıştırılamadı")
+        raise RuntimeError("RAG sorgusu hatası oluştu!")
 
     documents = result.get("documents") or [[]]
     metadatas = result.get("metadatas") or [[]]
@@ -216,11 +218,12 @@ def retrieve_relevant_chunks(
     return resultList
 
 
-def build_augmented_user_input(
+def build_input( #HER SEYI BURDA BIRLESTIRIYORUZ
     user_input: str,
     chunks: List[Dict[str, Any]],
     max_context_chars: Optional[int] = None,
 ) -> str:
+
     if not chunks:
         return user_input.strip()
 
@@ -239,6 +242,7 @@ def build_augmented_user_input(
     lines.append("")
 
     total = 0
+
     for idx, chunk in enumerate(sortedC, start=1):
         meta = chunk.get("metadata") or {}
         sourceName = meta.get("sourceName", "PDF")
@@ -264,12 +268,13 @@ def build_augmented_user_input(
     return "\n".join(lines).strip()
 
 
-def quick_rag_diagnostics(
+def rag_diagnostics(
     pdfPath: str,
     query: str,
     top_k: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
+
     if not pdfPath or not query:
         raise ValueError("pdfPath ve query boş olamaz.")
     _ = index_pdf(pdfPath)
-    return retrieve_relevant_chunks(query, top_k=top_k)
+    return retrieve_chunks(query, top_k=top_k)

@@ -7,8 +7,8 @@ from core import memory, llm
 from core.action import SafeExecutor
 from core.validate import IntentParser, IntentParserError, SecurityValidator
 from core.config import get_settings
-from core.rag import retrieve_relevant_chunks, build_augmented_user_input
-from core.local_intents import detect_local_intent, resolve_app_name
+from core.rag import retrieve_chunks, build_input
+from core.local_intents import detect_local_intent, resolve_app
 
 
 def normalize_text_for_time(text: str) -> str:
@@ -105,8 +105,8 @@ class LLMWorker(QThread): #LLM Worker
                 enrichedInput = self.userInput
                 if settings.rag_enabled:
                     try:
-                        ragChunks = retrieve_relevant_chunks(self.userInput)
-                        enrichedInput = build_augmented_user_input(
+                        ragChunks = retrieve_chunks(self.userInput)
+                        enrichedInput = build_input(
                             self.userInput,
                             ragChunks,
                         )
@@ -143,7 +143,7 @@ class LLMWorker(QThread): #LLM Worker
 
             if command == "open_app" and isinstance(parameters, dict) and parameters.get("app_name"):
                 parameters = dict(parameters)
-                parameters["app_name"] = resolve_app_name(parameters["app_name"])
+                parameters["app_name"] = resolve_app(parameters["app_name"])
 
             try:
                 executor = SafeExecutor()

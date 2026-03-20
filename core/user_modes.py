@@ -7,12 +7,13 @@ from typing import Any, Dict, List, Optional
 from .config import get_settings
 
 
-def get_db_path() -> str:
+def get_db_path() -> str: #database yolunu configden aliyoruz
     return get_settings().memory_db_path
 
 
-def init_modes_table() -> None:
+def init_modes_table() -> None: #user_modes tablosunu olusturuyoruz TODO bunu memory icine koyabiliriz simdilik kalsin
     dbPath = get_db_path()
+
     try:
         conn = sqlite3.connect(dbPath)
         conn.execute(
@@ -33,7 +34,7 @@ def init_modes_table() -> None:
         raise RuntimeError("User modes verıtabanı hatası")
 
 
-def parse_app(app_names_json: str) -> List[str]:
+def parse_app(app_names_json: str) -> List[str]: #UYGULAMA ADLARINI CIKARMAK ICIN
     if not app_names_json or not app_names_json.strip():
         return []
 
@@ -49,13 +50,13 @@ def parse_app(app_names_json: str) -> List[str]:
         return []
 
 
-def serialize_app(app_names: List[str]) -> str:
+def serialize_app(app_names: List[str]) -> str: #uygulama isimlerini dbye kaydetmek icin
     cleaned = [str(a).strip() for a in app_names if a and isinstance(a, str) and str(a).strip()]
     
     return json.dumps(cleaned, ensure_ascii=False)
 
 
-def parse_link(url_json: str) -> List[str]:
+def parse_link(url_json: str) -> List[str]: #db deki url leri almak icin
     if not url_json or not url_json.strip():
         return []
 
@@ -70,24 +71,26 @@ def parse_link(url_json: str) -> List[str]:
         return []
 
 
-def serialize_link(link_urls: List[str]) -> str:
+def serialize_link(link_urls: List[str]) -> str: #url leri db ye kaydetmek icin
     cleaned = [str(u).strip() for u in link_urls if u and isinstance(u, str) and str(u).strip()]
     return json.dumps(cleaned, ensure_ascii=False)
 
 
-def clean_browserN(browser_name: Optional[str]) -> str:
+def clean_browserN(browser_name: Optional[str]) -> str: #tarayici ismini temzileemk icin
     return (browser_name or "").strip()
 
 
-def create_mode(
+def create_mode( #KUILLANICININ OLUSTURDUGU MODU DB YE KAYDETME KISMI
     name: str,
     app_names: List[str],
     link_urls: Optional[List[str]] = None,
     browser_name: Optional[str] = None,
 ) -> int:
+
     dbPath = get_db_path()
     createdAt = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     nameClean = (name or "").strip()
+
     if not nameClean:
         raise RuntimeError("Mod adi bos olamaz")
 
@@ -112,13 +115,14 @@ def create_mode(
         raise RuntimeError("Mod kaydedilemedi")
 
 
-def update_mode(
+def update_mode( #VAROLAN MODU GUNCELLEMEK ICIN
     modeId: int,
     name: str,
     app_names: List[str],
     link_urls: Optional[List[str]] = None,
     browser_name: Optional[str] = None,
 ) -> None:
+
     dbPath = get_db_path()
     nameClean = (name or "").strip()
     if not nameClean:
@@ -144,7 +148,7 @@ def update_mode(
         raise RuntimeError("Mod guncellenemedi")
 
 
-def delete_mode(modeId: int) -> None:
+def delete_mode(modeId: int) -> None: #VAROLAN MODU ISLMEK ICIN
     dbPath = get_db_path()
     try:
         conn = sqlite3.connect(dbPath)
@@ -161,7 +165,7 @@ def delete_mode(modeId: int) -> None:
         raise RuntimeError("Mod silinemedi")
 
 
-def get_modes(limit: Optional[int] = None) -> List[Dict[str, Any]]:
+def modes(limit: Optional[int] = None) -> List[Dict[str, Any]]: #Mevcut modlari doner
     dbPath = get_db_path()
     query = """
         SELECT id, name, app_names_json, url_json, browser_name, createdAt
@@ -194,7 +198,7 @@ def get_modes(limit: Optional[int] = None) -> List[Dict[str, Any]]:
         raise RuntimeError("Modlar listelenemedi")
 
 
-def get_mode_id(modeId: int) -> Optional[Dict[str, Any]]:
+def mode_id(modeId: int) -> Optional[Dict[str, Any]]: #ID ye gore mod doner
     dbPath = get_db_path()
     try:
         conn = sqlite3.connect(dbPath)
@@ -223,12 +227,12 @@ def get_mode_id(modeId: int) -> Optional[Dict[str, Any]]:
         raise RuntimeError("Mod okunamadi")
 
 
-def get_mode_name(name: str) -> Optional[Dict[str, Any]]:
+def mode_name(name: str) -> Optional[Dict[str, Any]]: #mod adina gore mod doner
     if not name or not str(name).strip():
         return None
 
     nameClean = str(name).strip().lower()
-    allModes = get_modes()
+    allModes = modes()
 
     if not allModes:
         return None

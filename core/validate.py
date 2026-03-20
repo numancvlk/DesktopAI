@@ -8,19 +8,19 @@ from .intent import IntentModel
 class IntentParserError(Exception):
     pass
 
-def fix_json_string(s: str) -> str:
+def fix_json(s: str) -> str: #HATALI JSONLARI DUZELTMEK ICIN
     s = re.sub(r",\s*}", "}", s)
     s = re.sub(r",\s*]", "]", s)
     return s
 
 
-def extract_json_from_string(text: str) -> Dict[str, Any]:
+def extract_json(text: str) -> Dict[str, Any]: #json DISINDA OLAN BIR SEY VARSA ONLARI TEMIZLIYORUZ
     text = (text or "").strip()
 
     if not text:
         raise IntentParserError("LLM yanıtı boş")
 
-    for candidate in (text, fix_json_string(text)):
+    for candidate in (text, fix_json(text)):
 
         try:
             return json.loads(candidate)
@@ -30,7 +30,7 @@ def extract_json_from_string(text: str) -> Dict[str, Any]:
     cleaned = re.sub(r"^```(?:json)?\s*", "", text)
     cleaned = re.sub(r"\s*```\s*$", "", cleaned).strip()
 
-    for candidate in (cleaned, fix_json_string(cleaned)):
+    for candidate in (cleaned, fix_json(cleaned)):
         try:
             return json.loads(candidate)
         except json.JSONDecodeError:
@@ -50,7 +50,7 @@ def extract_json_from_string(text: str) -> Dict[str, Any]:
             depth -= 1
             if depth == 0:
                 chunk = text[start : i + 1]
-                for candidate in (chunk, fix_json_string(chunk)):
+                for candidate in (chunk, fix_json(chunk)):
                     try:
                         return json.loads(candidate)
                     except json.JSONDecodeError:
@@ -62,7 +62,7 @@ def extract_json_from_string(text: str) -> Dict[str, Any]:
     if end > start:
         chunk = text[start : end + 1]
 
-        for candidate in (chunk, fix_json_string(chunk)):
+        for candidate in (chunk, fix_json(chunk)):
             try:
                 return json.loads(candidate)
             except json.JSONDecodeError:
@@ -72,9 +72,8 @@ def extract_json_from_string(text: str) -> Dict[str, Any]:
 
 class IntentParser:
     def parse(self, raw_payload: Any) -> IntentModel:
-
         if isinstance(raw_payload, str):
-            data = extract_json_from_string(raw_payload)
+            data = extract_json(raw_payload)
 
         elif isinstance(raw_payload, Mapping):
             data = dict(raw_payload)
@@ -107,8 +106,8 @@ class IntentParser:
 
 
 class SecurityValidator:
-    ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder", "organize_desktop", "activate_mode"}
-    FORBIDDEN_KEYWORDS = (
+    ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder", "organize_desktop", "activate_mode"} #izin verilen komutlar
+    FORBIDDEN_KEYWORDS = ( #izin veri;lmeyenler
         "powershell",
         "get-startapps",
         ".ps1",
@@ -128,7 +127,7 @@ class SecurityValidator:
 
     MARKUP_PATTERN = re.compile(r"[*_`#\[\]]")
 
-    def validate(self, intent: IntentModel) -> IntentModel: #Guvenlik kontrolu yapiyoruz
+    def validate(self, intent: IntentModel) -> IntentModel: #guvenlik kontrolu uzun uzun  aciklamaya usendim sorulursa aciklarim
         normalized = IntentModel(
             intent=intent.intent,
             command=intent.command,
@@ -137,6 +136,7 @@ class SecurityValidator:
         )
 
         normalized.command = normalized.command.strip().lower()
+
         if not normalized.command:
             normalized.command = "none"
 
@@ -144,25 +144,23 @@ class SecurityValidator:
             normalized.command = "none"
             normalized.parameters = {}
             normalized.response = (
-                "Bu istekte tanımlı olmayan bir komut algıladım, "
-                "bu yüzden herhangi bir sistem komutu çalıştırmadım."
+                "Bu istekte tanımlı olmayan bir komut algıladım!"
             )
-            normalized.response = self.sanitize_response(normalized.response)
+            normalized.response = self.clean_response(normalized.response)
             return normalized
 
-        if self.forbidden_content(
+        if self.forbidden_kw(
             normalized.intent, normalized.parameters
         ):
             normalized.command = "none"
             normalized.parameters = {}
             normalized.response = (
-                "Bu istekte güvenlik riski tespit ettim, "
-                "bu yüzden herhangi bir sistem komutu çalıştırmadım."
+                "Bu istekte güvenlik riski tespit ettim!"
             )
-            normalized.response = self.sanitize_response(normalized.response)
+            normalized.response = self.clean_response(normalized.response)
             return normalized
 
-        normalized.response = self.sanitize_response(normalized.response)
+        normalized.response = self.clean_response(normalized.response)
 
         if normalized.command == "none":
             normalized.parameters = {}
@@ -171,15 +169,16 @@ class SecurityValidator:
             if not modeName:
                 normalized.command = "none"
                 normalized.parameters = {}
-                normalized.response = self.sanitize_response("Hangi modu açmamı istiyorsun?")
+                normalized.response = self.clean_response("Hangi modu açmamı istiyorsun?")
 
         return normalized
 
-    def forbidden_content(
+    def forbidden_kw( #izin verilmeyen anahtar kelimeleri ariyoruz
         self,
         intent_text: str,
         parameters: Mapping[str, Any],
     ) -> bool:
+
         haystack = [intent_text]
         haystack.extend(self.flatten_values(parameters.values()))
 
@@ -203,7 +202,7 @@ class SecurityValidator:
             else:
                 yield value
 
-    def sanitize_response(self, text: str) -> str: #Markdownu kaldniyuoruz
+    def clean_response(self, text: str) -> str: #Markdownu kaldniyuoruz
         cleaned = self.MARKUP_PATTERN.sub("", text)
         cleaned = cleaned.strip()
         return cleaned

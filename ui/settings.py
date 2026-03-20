@@ -366,7 +366,7 @@ class SettingsDialog(QDialog):
     def refresh_mods(self) -> None:
         self.modList.clear()
         try:
-            for mode in user_modes.get_modes():
+            for mode in user_modes.modes():
                 item = QListWidgetItem(mode.get("name", ""))
                 item.setData(Qt.ItemDataRole.UserRole, mode.get("id"))
                 self.modList.addItem(item)
@@ -388,7 +388,7 @@ class SettingsDialog(QDialog):
 
         modeId = current.data(Qt.ItemDataRole.UserRole)
         try:
-            mode = user_modes.get_mode_id(modeId)
+            mode = user_modes.mode_id(modeId)
             if mode:
                 apps = mode.get("app_names", [])
                 links = mode.get("link_urls", [])
@@ -420,7 +420,7 @@ class SettingsDialog(QDialog):
             return
         modeId = current.data(Qt.ItemDataRole.UserRole)
         try:
-            mode = user_modes.get_mode_id(modeId)
+            mode = user_modes.mode_id(modeId)
             if not mode:
                 return
             dlg = ModEditDialog(
