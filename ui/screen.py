@@ -486,7 +486,8 @@ class MainScreen(QMainWindow):
         pass
 
     def on_message_ready(self, text: str): 
-        self.chatArea.append(f"<b>Asistan:</b> {text}")
+        safeText = (text or "").replace("\n", "<br>")
+        self.chatArea.append(f"<b>Asistan:</b> {safeText}")
 
     def on_error(self, message: str):
         self.chatArea.append(f"<span style='color: red;'><b>Hata:</b> {message}</span>")

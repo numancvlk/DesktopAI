@@ -14,7 +14,10 @@ from .config import get_settings
 from . import reminders
 from . import user_modes
 
+# Başlata gidecek uygulama isimlerinde zararli bir sey olmamiasi icin kontrol ediyoruz
 SAFE_APP_PATTERN = re.compile(r"^[a-zA-Z0-9\u00c0-\u024f\s\-_.]{1,80}$")
+
+# Bunlar asistanin acmamasi gereken uygulamaalr 
 FORBIDDEN_APP = (
     "cmd", "powershell", "pwsh", "regedit", "format", "del ", "erase ",
     "shutdown", "wscript", "cscript", "schtasks",
@@ -44,6 +47,7 @@ def safe_app_name(name: str) -> bool:
     return True
 
 
+# baslat menusunu acip uygulama adini yapistirip[ enterla aciyoruz
 def open_start_menu(app_name: str) -> None:
     pyperclip.copy(app_name)
     time.sleep(0.05)
@@ -54,6 +58,7 @@ def open_start_menu(app_name: str) -> None:
     pyautogui.press("enter")
 
 
+# url formatini kontrol ediyoruz
 def normalize_url(raw_url: str) -> Optional[str]:
     if not isinstance(raw_url, str):
         return None
@@ -76,7 +81,8 @@ def normalize_url(raw_url: str) -> Optional[str]:
     return parsed.geturl()
 
 
-def open_browser_links(browser_name: str, urls: list[str]) -> tuple[int, int]:
+# Tarayiciyi aciyor en son neler acildi acilmadi onlarin kaydini tutuyor
+def open_links(browser_name: str, urls: list[str]) -> tuple[int, int]:
     if not urls:
         return 0, 0
 
@@ -134,9 +140,8 @@ def screenshot_save_dir() -> Path:
     return Path(settings.screenshot_save_dir)
 
 
+# masausutunu duzenlemek icin masaustunun yolunu bulyuoz
 def desktop_dir() -> Path:
-
-
     userprofile = os.environ.get("USERPROFILE", "") or None
 
     if userprofile:
@@ -185,6 +190,7 @@ def desktop_dir() -> Path:
     return home / "Desktop"
 
 
+# ayni isimde dosyalar varsa onlari 1 2 diye siraliyoruz 
 def resolve_name_collision(targetPath: Path) -> Path:
     parent = targetPath.parent
     stem = targetPath.stem
@@ -197,6 +203,7 @@ def resolve_name_collision(targetPath: Path) -> Path:
             return candidate
 
 
+# Masaustundeki dosyalari kategorilere ayiriyorz
 def organize_desktop() -> str:
     desktop = desktop_dir()
 
@@ -270,7 +277,7 @@ def organize_desktop() -> str:
     totalMoved = sum(moved.values())
 
     if totalMoved == 0:
-        return "Taşınacak uygun dosya bulunamadı, masaüstü zaten düzenli görünüyor."
+        return "Masaüstü zaten düzenli görünüyor!"
 
     parts = []
 
@@ -282,6 +289,7 @@ def organize_desktop() -> str:
     return f"Masaüstü düzenlendi: {summary}."
 
 
+# Ekran gorunutusunu kaydedıp ekranda gosterıyoruz
 def take_screenshot() -> str:
     saveDir = screenshot_save_dir()
     saveDir.mkdir(parents=True, exist_ok=True)
@@ -304,7 +312,8 @@ def take_screenshot() -> str:
     return str(filepath)
 
 
-def parse_reminder_time(raw: Any) -> datetime:
+
+def parse_reminder_time(raw: Any) -> datetime: #HATIRLATICI ICIN ZAMAN FORMATINI KONTROL EDIYORUZ
 
     if not isinstance(raw, str) or not raw.strip():
         raise RuntimeError("Hatırlatıcı zamanı yanlis")
@@ -331,7 +340,7 @@ def parse_reminder_time(raw: Any) -> datetime:
 
     raise RuntimeError("Hatırlatıcı zamanı yanlis")
 
-
+# LLM yada yerel niyet tespitinden sonra sadece bu komutlar calisir olmasi gerekiyor.
 class SafeExecutor:
     ALLOWED_COMMANDS = {"none", "open_app", "screenshot", "set_reminder", "organize_desktop", "activate_mode"}
 
@@ -342,7 +351,7 @@ class SafeExecutor:
             raise RuntimeError("Bu komut tanımlı değil")
 
         if cmd == "none":
-            return None
+            return None 
 
         if cmd == "open_app":
             appName = parameters.get("app_name") if isinstance(parameters, dict) else None
@@ -364,7 +373,8 @@ class SafeExecutor:
         if cmd == "organize_desktop":
             return organize_desktop()
 
-        if cmd == "activate_mode": #TODO buna uygulama acma disindada bir seyler yapabilirim ama simdilik tez icin yeter bu kadar
+        # Modlari calistiriyoruz
+        if cmd == "activate_mode": #TODO elin degerse bunlari fonksiyona tasi
             modeName = parameters.get("mode_name") if isinstance(parameters, dict) else None
             if not isinstance(modeName, str) or not modeName.strip():
                 raise RuntimeError("Mod adi belirtilmedi")
@@ -400,7 +410,7 @@ class SafeExecutor:
             resolvedBrowser = str(browserName).strip() if isinstance(browserName, str) else ""
             if normalizedLinks and not safe_app_name(resolvedBrowser):
                 raise RuntimeError("Link acmak icin mod ayarinda gecerli bir tarayici belirtin")
-            openedLinks, failedLinks = open_browser_links(resolvedBrowser, normalizedLinks)
+            openedLinks, failedLinks = open_links(resolvedBrowser, normalizedLinks)
 
             openedApps = 0
             for app in appNames:
@@ -421,7 +431,8 @@ class SafeExecutor:
                 f"Atlanan site: {skippedInvalidLinks + skippedDuplicateLinks}, acilamayan site: {failedLinks}."
             )
 
-        if cmd == "set_reminder": #TODO KONTROL EDILECEK HATIRLATMA CALISMIYOR
+        # hatirlatici ayalari vs TODO bunu da tasi 
+        if cmd == "set_reminder":
             if not isinstance(parameters, dict):
                 raise RuntimeError("Hatırlatıcı parametreleri geçersiz")
 

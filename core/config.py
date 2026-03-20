@@ -1,33 +1,33 @@
-# LIBRARIES * CONFIG BURDAN GELIR BIZI MDEGERLER
+# LIBRARIES
 import os
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel, ValidationError
 
+# Uygulama ayarlarımiz 
 class Settings(BaseModel):
-    base_url: str
-    ai_model: str
-    timeout: float
-    default_timeout: float
-    memory_db_path: str
-    screenshot_save_dir: str
-    stt_model: str
-    stt_language: str
-    stt_beam_size: int
-    stt_compute_type: str
-    stt_sample_rate: int
-    stt_record_seconds: float
-    rag_enabled: bool
-    rag_pdf_dir: str
-    rag_embedding_model: str
-    rag_top_k: int
+    base_url: str  # buraya istek atiyoruz (local)
+    ai_model: str  # modelin ismi
+    timeout: float  # belirli bir saniye cevap gelmezse timeout atiyoruz
+    memory_db_path: str  # sohbetin kullanici modlarinin vs kaydini tuttugumuz dosya yolu.
+    screenshot_save_dir: str  # ekran goruntulerini kaydedecegimiz yol. TODO kaldir bunu ayarlardan secelim
+    stt_model: str  # STT modelinin ismi
+    stt_language: str  # STT algilanmasi gereken dil
+    stt_beam_size: int  # yuksek deger yavas ama daha dogru
+    stt_compute_type: str  # hesaplama tipi
+    stt_sample_rate: int  # sample rate
+    stt_record_seconds: float  # mikrofon kayit suresi kac saniye sonra kayit kesilsin
+    rag_enabled: bool #TRUE pdfden gelen parcalari ekliyor FALSE ise sadece sooruya cevap veriyor
+    rag_pdf_dir: str  # PDF lerin ve rag indekslerinin bulundugu yol
+    rag_embedding_model: str  # embedding modelinin ismi
+    rag_top_k: int  # RAG icin getirilecek parca sayisi 
 
     @property
     def baseUrl(self) -> str:
         return self.base_url
 
     @property
-    def llmModel(self) -> str:
+    def llmModel(self) -> str: 
         return self.ai_model
 
     @classmethod
@@ -35,7 +35,6 @@ class Settings(BaseModel):
         baseUrl = os.getenv("BASE_URL")
         llmModel = os.getenv("LLM_MODEL")
         timeout = os.getenv("TIMEOUT")
-        defaultTimeout = os.getenv("DEFAULT_TIMEOUT")
         memoryDbPath = os.getenv("MEMORY_DB_PATH")
         screenshotSaveDir = os.getenv("SCREENSHOT_SAVE_DIR")
         sttModel = os.getenv("STT_MODEL")
@@ -70,15 +69,6 @@ class Settings(BaseModel):
             raise RuntimeError("TIMEOUT eksik veya boş")
 
         try:
-            defaultTimeout = (
-                float(defaultTimeout) if defaultTimeout is not None else 0.0
-            )
-        except:
-            raise RuntimeError(
-                "DEFAULT_TIMEOUT eksik veya boş"
-            )
-
-        try:
             sttBeamSizeInt = int(sttBeamSize)
         except Exception:
             raise RuntimeError("STT_BEAM_SIZE geçerli bir tam sayı olmalıdır")
@@ -107,7 +97,6 @@ class Settings(BaseModel):
                 base_url=baseUrl.strip(),
                 ai_model=llmModel.strip(),
                 timeout=timeout,
-                default_timeout=defaultTimeout,
                 memory_db_path=memoryDbPath,
                 screenshot_save_dir=screenshotSaveDir,
                 stt_model=sttModel.strip(),
@@ -124,6 +113,7 @@ class Settings(BaseModel):
         except Exception:
             raise RuntimeError("Geçersiz env değerleri")
 
+# tekrar okumamak icin cacheyapiyoz
 cachedSettings: Optional[Settings] = None
 
 def get_settings() -> Settings:

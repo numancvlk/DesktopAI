@@ -62,6 +62,19 @@ OPEN_APP_KEYWORDS = (
     "acsana",
 )
 
+CAPABILITIES_KEYWORDS = (
+    "neler yapabiliyorsun",
+    "neler yapabilirsin",
+    "ozelliklerin neler",
+    "özelliklerin neler",
+    "hangi ozelliklerin var",
+    "hangi özelliklerin var",
+    "nasil ozelliklerin var",
+    "nasil özelliklerin var",
+    "ne yapabiliyorsun",
+    "ne yapabilirsin",
+)
+
 APP_ALIASES = {
     "whatsapp": "whatsapp",
     "watsap": "whatsapp",
@@ -288,9 +301,31 @@ def has_organize_desktop_intent(normalized: str) -> bool:
         return False
     return any(kw in normalized for kw in ORGANIZE_DESKTOP_KEYWORDS)
 
+def has_capabilities(normalized: str) -> bool:
+    if not normalized:
+        return False
+    return any(kw in normalized for kw in CAPABILITIES_KEYWORDS)
+
 
 def detect_local_intent(text: str) -> Optional[Dict[str, Any]]:
     normalized = normalize_spoken_command(text)
+
+    if has_capabilities(normalized):
+        return {
+            "command": "none",
+            "parameters": {},
+            "response": (
+                "Aşağıdaki işlemleri yapabilirim:\n"
+                "- Uygulama açma\n"
+                "- Masaüstü düzenleme\n"
+                "- RAG modu (PDF soru-cevap)\n"
+                "- Mod oluşturma ve çalıştırma\n"
+                "- Hatırlatıcı kurma\n"
+                "- Sohbet etme\n"
+                "- Ekran görüntüsü alma"
+            ),
+            "normalized": normalized,
+        }
 
     if has_screenshot_intent(normalized):
         return {

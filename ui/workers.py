@@ -98,7 +98,7 @@ class LLMWorker(QThread): #LLM Worker
         self.startedProcessing.emit()
 
         try:
-            history = memory.get_last_messages(limit=5)
+            history = memory.get_last_messages(limit=3)
             settings = get_settings()
 
             if self.mode == "rag":

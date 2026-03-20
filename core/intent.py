@@ -3,16 +3,13 @@ from typing import Any, Dict
 from pydantic import BaseModel, Field, validator
 
 
-class IntentModel(BaseModel):
-    """
-    LLM'den beklenen JSON
-    """
-    intent: str = Field(default="")
-    command: str = Field(default="none")
-    parameters: Dict[str, Any] = Field(default_factory=dict)
-    response: str = Field(default="")
+class IntentModel(BaseModel): #LLM YANITININ FORMATI
+    intent: str = Field(default="") #niyet kismi (open_app, set+_reminder vb)
+    command: str = Field(default="none") #Komut ismi ama once dogrulanmasi lazim
+    parameters: Dict[str, Any] = Field(default_factory=dict) #Komut icin gereken parametreler
+    response: str = Field(default="") #UI da gozukmesi gereken yanit
 
-    class Config:
+    class Config: #Ekstra kisimlari cikariyoruz
         extra = "ignore"
 
     @validator("intent", "command", "response", pre=True)
