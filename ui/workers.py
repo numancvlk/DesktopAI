@@ -11,7 +11,7 @@ from core.rag import retrieve_chunks, build_input
 from core.local_intents import detect_local_intent, resolve_app
 
 
-def normalize_text_for_time(text: str) -> str:
+def normalize_time_text(text: str) -> str: #reminder icin zamanlari tutarli islemek icin
     lowered = (text or "").strip().lower()
     lowered = (
         lowered.replace("ç", "c")
@@ -24,8 +24,8 @@ def normalize_text_for_time(text: str) -> str:
     return lowered
 
 
-def relative_reminder_time(user_text: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
-    normalized = normalize_text_for_time(user_text)
+def relative_reminder_time(user_text: str, parameters: Dict[str, Any]) -> Dict[str, Any]: #20 dk sonra dedik mesela bunu utc ye ceviriyr
+    normalized = normalize_time_text(user_text)
 
     match = re.search(r"(\d+)\s*(saniye|sn|dakika|dk|saat)\s*sonra", normalized)
 
@@ -54,22 +54,22 @@ def relative_reminder_time(user_text: str, parameters: Dict[str, Any]) -> Dict[s
         minute = int(timeMatch.group(2))
 
         now = datetime.datetime.utcnow()
-        base_date = now.date()
+        baseDate = now.date()
 
         if "yarin" in normalized or "yarın" in user_text.lower():
-            base_date = base_date + datetime.timedelta(days=1)
+            baseDate = baseDate + datetime.timedelta(days=1)
         elif "bugun" in normalized or "bu gun" in normalized or "bugün" in user_text.lower():
-            base_date = base_date
+            baseDate = baseDate
         else:
-            candidate = datetime.datetime.combine(base_date, datetime.time(hour=hour, minute=minute))
+            candidate = datetime.datetime.combine(baseDate, datetime.time(hour=hour, minute=minute))
 
             if candidate <= now:
-                base_date = base_date + datetime.timedelta(days=1)
+                baseDate = baseDate + datetime.timedelta(days=1)
 
         due = datetime.datetime(
-            year=base_date.year,
-            month=base_date.month,
-            day=base_date.day,
+            year=baseDate.year,
+            month=baseDate.month,
+            day=baseDate.day,
             hour=hour,
             minute=minute,
             second=0,
@@ -83,7 +83,7 @@ def relative_reminder_time(user_text: str, parameters: Dict[str, Any]) -> Dict[s
     return parameters
 
 
-class LLMWorker(QThread): #LLM Worker
+class LLMWorker(QThread): #LLM Worker UI kitlenmmesin diye llm cal local intent guvenlik dogrulamalari vs burda
     startedProcessing = Signal()
     newMessage = Signal(str)
     errorOccured = Signal(str)
@@ -101,7 +101,7 @@ class LLMWorker(QThread): #LLM Worker
             history = memory.get_last_messages(limit=3)
             settings = get_settings()
 
-            if self.mode == "rag":
+            if self.mode == "rag": #rag a geci nce pdf chunklarini inputa ekliyoruz
                 enrichedInput = self.userInput
                 if settings.rag_enabled:
                     try:
@@ -120,14 +120,13 @@ class LLMWorker(QThread): #LLM Worker
                 return
 
             forcedIntent = detect_local_intent(self.userInput)
-            if forcedIntent is not None:
+            if forcedIntent is not None: # yerel intent bulunursa llm e gitmez direkt calisir
                 command = forcedIntent["command"]
                 parameters = forcedIntent["parameters"]
                 displayResponse = forcedIntent.get("response") or "Tamam."
-            else:
+            else: #yerel intent te tespit edilmezse llm den intent alinir
                     enrichedInput = self.userInput
                     rawJson = llm.call(history, enrichedInput)
-                    print("LLM RAW RESPONSE:", rawJson) #TODO DEBUG KALDIRILACAK
                     parser = IntentParser()
                     intent = parser.parse(rawJson)
                     validator = SecurityValidator()
@@ -159,14 +158,14 @@ class LLMWorker(QThread): #LLM Worker
             memory.append_message("assistant", displayResponse)
             self.newMessage.emit(displayResponse)
 
-        except IntentParserError as exc:
+        except IntentParserError as exc: #JSON DUZGU PARSE EDILEMEZSE
             self.errorOccured.emit(str(exc))
 
-        except RuntimeError as exc:
+        except RuntimeError as exc: #RUNTIME HATALARI 
             self.errorOccured.emit(str(exc))
 
         except Exception as exc:
-            self.errorOccured.emit(f"Beklenmeyen hata: {type(exc).__name__}: {exc}")
+            self.errorOccured.emit(f"Beklenmeyen bir hata olustu!")
             
         finally:
             self.finishedProcessing.emit()

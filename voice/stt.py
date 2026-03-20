@@ -5,7 +5,6 @@ import wave
 import numpy as np
 import sounddevice as sd
 import threading
-
 from pathlib import Path
 from typing import Optional
 from faster_whisper import WhisperModel
@@ -15,7 +14,7 @@ from core.local_intents import normalize_mic
 stt_model: Optional[WhisperModel] = None
 stt_load = threading.Lock()
 
-def get_stt_model() -> WhisperModel:
+def get_stt_model() -> WhisperModel: #STT modelini en basta yukluyorz
     global stt_model
 
     if stt_model is None:
@@ -31,7 +30,7 @@ def get_stt_model() -> WhisperModel:
     return stt_model
 
 
-def record_audio(duration_seconds: float | None = None) -> str:
+def record_audio(duration_seconds: float | None = None) -> str: #Micden gelen sesin kaydini yapar gecici WAV uretir
     settings = get_settings()
     sampleRate = int(settings.stt_sample_rate)
     effectiveDuration = (
@@ -95,7 +94,7 @@ def record_audio(duration_seconds: float | None = None) -> str:
     return tempPath
  
  
-def transcribe_audio(audio_path: str) -> str:
+def transcribe_audio(audio_path: str) -> str: #VAW dosyasi metne ceviriliyor normalize_mic ile hatalari duzeltiyoruz
     if not audio_path:
         raise ValueError("audio_path boş olamaz.")
 
@@ -122,4 +121,3 @@ def transcribe_audio(audio_path: str) -> str:
     transcript = " ".join(transcriptParts).strip()
     correctedTranscript = normalize_mic(transcript)
     return correctedTranscript
- 

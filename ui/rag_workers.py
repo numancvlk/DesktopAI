@@ -1,14 +1,13 @@
- #LIBRARIES
+# LIBRARIES
 from PySide6.QtCore import QThread, Signal
 from core.rag import index_pdf
 
-class RAGIndexWorker(QThread): 
+class RAGIndexWorker(QThread): #rag workers UI kitlenmesi RAG sirasinda diye
     indexingFinished = Signal(str)
     errorOccured = Signal(str)
 
     def __init__(self, pdf_path: str, parent=None):
         super().__init__(parent)
-
         self.pdfPath = pdf_path
 
     def run(self):

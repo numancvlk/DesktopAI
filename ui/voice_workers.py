@@ -3,7 +3,7 @@ from PySide6.QtCore import QThread, Signal
 from voice.stt import record_audio, transcribe_audio
 
 
-class VoiceListenWorker(QThread): #STT Worker
+class VoiceListenWorker(QThread): #STT Worker UI kitlenmesi STT sirasinda diye
     transcriptReady = Signal(str)
     errorOccured = Signal(str)
 
@@ -19,13 +19,13 @@ class VoiceListenWorker(QThread): #STT Worker
             self.errorOccured.emit(str(exc))
 
 
-class VoiceSpeakWorker(QThread): # TTS Worker
-    speakFinished = Signal()
-    errorOccured = Signal(str)
+# class VoiceSpeakWorker(QThread): # TTS Worker sistem dostu olmasi icin eklemicem
+#     speakFinished = Signal()
+#     errorOccured = Signal(str)
 
-    def __init__(self, text: str = "", parent=None):
-        super().__init__(parent)
-        self.text = text
+#     def __init__(self, text: str = "", parent=None):
+#         super().__init__(parent)
+#         self.text = text
 
-    def run(self):
-        raise NotImplementedError("Ses çıktısı etkin degil")
+#     def run(self):
+#         raise NotImplementedError("Ses çıktısı etkin degil")
