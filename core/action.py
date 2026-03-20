@@ -291,12 +291,13 @@ def organize_desktop() -> str:
 
 # Ekran gorunutusunu kaydedıp ekranda gosterıyoruz
 def take_screenshot() -> str:
-    saveDir = screenshot_save_dir()
+    saveDir = desktop_dir()
     saveDir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"ekran_goruntusu_{timestamp}.png"
     filepath = saveDir / filename
     try:
+        time.sleep(3)
         img = pyautogui.screenshot()
         img.save(str(filepath))
 

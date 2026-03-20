@@ -6,23 +6,8 @@ from typing import Any, Dict, Optional
 from .action import safe_app_name
 from . import user_modes
 
+# Ekran görüntüsü almak için keywordler
 SCREENSHOT_PATTERNS = (
-    "screenshot",
-    "screen shot",
-    "screen capture",
-    "screencapture",
-    "print screen",
-    "prtsc",
-    "ekran goruntusu",
-    "ekran goruntusunu",
-    "ekran goruntusu al",
-    "ekran al",
-    "ekrani kaydet",
-    "ekrani kaydet",
-    "ss al",
-)
-
-SCREENSHOT_SUBJECT_PATTERNS = (
     "ekran goruntusu",
     "screenshot",
     "screen shot",
@@ -33,6 +18,7 @@ SCREENSHOT_SUBJECT_PATTERNS = (
     "ss",
 )
 
+# Erkan goruntusu almak ıcın aksıyon keyworrdlerı
 SCREENSHOT_ACTION_WORDS = (
     "al",
     "cek",
@@ -53,6 +39,7 @@ SCREENSHOT_META_WORDS = (
     "olmus",
 )
 
+# open_app komutu icin aksiyon keywordleri
 OPEN_APP_KEYWORDS = (
     "ac",
     "open",
@@ -62,6 +49,7 @@ OPEN_APP_KEYWORDS = (
     "acsana",
 )
 
+# Kullanici ne yaptigini merak ederse sorabilecegi sorular
 CAPABILITIES_KEYWORDS = (
     "neler yapabiliyorsun",
     "neler yapabilirsin",
@@ -75,6 +63,7 @@ CAPABILITIES_KEYWORDS = (
     "ne yapabilirsin",
 )
 
+#STT bazen yanlis yazabiliyor buraya duzeltmeler ekledik normalize yani
 APP_ALIASES = {
     "whatsapp": "whatsapp",
     "watsap": "whatsapp",
@@ -97,6 +86,7 @@ APP_ALIASES = {
     "calculator": "hesap makinesi",
 }
 
+# STT hatalari icin duzeltmeler #TODO usttekiyle alttaki niye ayri duzelt APP_ALLIES icine al
 SPOKEN_WORD_REPLACEMENTS = {
     "siti": "steam",
     "sitiyi": "steam",
@@ -108,45 +98,58 @@ SPOKEN_WORD_REPLACEMENTS = {
     "vatsup": "whatsapp",
 }
 
+# APP adlarini dogru tespit edebilmek ici nveya niyeti
 FILLER_WORDS = {
     "lutfen",
     "please",
     "hadi",
     "bana",
-    "sana",
     "uygulamasini",
     "uygulama",
     "programini",
     "program",
-    "sana",
     "misin",
     "misin",
     "musun",
     "musun",
     "misiniz",
     "musunuz",
-    "a",
     "kocum",
     "kanka",
     "dostum",
-    "evet",
-    "yi",
-    "yı",
-    "yu",
-    "yü",
-    "i",
-    "ı",
-    "u",
-    "ü",
-    "m",
-    "s",
-    "n",
-    "ar",
 }
 
+#MASAUSTUNU DUZENLEMEK ICIN AKSIYON KW'leri
+ORGANIZE_DESKTOP_KEYWORDS = (
+    "toparla",
+    "duzenle",
+    "duzenleme",
+    "duzenleyiver",
+    "duzernle",
+    "duzernleyiver",
+    "masaustu",
+    "masaüstü",
+    "masaustumu",
+    "masaüstümü",
+    "masaustunu",
+    "masaüstünü",
+    "masautunu",
+    "desktop",
+    "klasor",
+    "klasör",
+    "dosyalari",
+    "dosyaları",
+    "türlerine",
+    "turlerine",
+    "gore",
+    "göre",
+)
 
+
+# disardan gelen inputu temizliyor bu olmazsa bazen niyeti yanlsi tespit ediyor sart
 def normalize_user_text(text: str) -> str:
     lowered = (text or "").strip().lower()
+
     lowered = (
         lowered.replace("ç", "c")
         .replace("ğ", "g")
@@ -155,17 +158,21 @@ def normalize_user_text(text: str) -> str:
         .replace("ş", "s")
         .replace("ü", "u")
     )
+
     normalized = unicodedata.normalize("NFKD", lowered)
     noAccent = "".join(ch for ch in normalized if not unicodedata.combining(ch))
     noPunct = re.sub(r"[^a-z0-9\s]", " ", noAccent)
     return re.sub(r"\s+", " ", noPunct).strip()
 
 
-def normalize_spoken_command(text: str) -> str:
+# STT hatalarini burda duzeltiyorum
+def normalize_mic(text: str) -> str:
     normalized = normalize_user_text(text)
     corrected = normalized
+
     for wrong, correct in SPOKEN_WORD_REPLACEMENTS.items():
         corrected = re.sub(rf"\b{re.escape(wrong)}\b", correct, corrected)
+        
     return corrected
 
 
@@ -184,7 +191,8 @@ def strip_turkish_suffixes(token: str) -> str:
     return token
 
 
-def resolve_app_name(appName: str) -> str:
+#uygulama adini app_allies a gore cozer yoksa fuzzy mathing ile en yakini buluyoruz
+def resolve_app(appName: str) -> str:
     compact = compact_key(appName)
 
     if not compact:
@@ -192,6 +200,7 @@ def resolve_app_name(appName: str) -> str:
 
     compactNoSuffix = strip_turkish_suffixes(compact)
     direct = APP_ALIASES.get(compact) or APP_ALIASES.get(compactNoSuffix)
+
     if direct:
         return direct
 
@@ -203,8 +212,8 @@ def resolve_app_name(appName: str) -> str:
 
     return appName
 
-
-def extract_open_app_name(normalized: str) -> str:
+#Uygulama adini tam olarak tespit etmek icin 
+def extract_open_app(normalized: str) -> str:
     if not normalized:
         return ""
 
@@ -224,11 +233,13 @@ def extract_open_app_name(normalized: str) -> str:
         for token in appName.split()
         if token and token not in FILLER_WORDS and len(token) > 1
     ]
+
     cleanedTokens = [strip_turkish_suffixes(token) for token in tokens]
     return " ".join(cleanedTokens).strip()
 
 
-def has_open_app_intent(normalized: str) -> bool:
+# uygulama acma aksiyon kw leri vvar mi
+def open_app_intent(normalized: str) -> bool:
     if not normalized:
         return False
 
@@ -243,11 +254,12 @@ def has_open_app_intent(normalized: str) -> bool:
     )
 
 
-def has_screenshot_intent(normalized: str) -> bool:
+#ekran goruntusu niyetini anlamak icin
+def screenshot_intent(normalized: str) -> bool:
     if not normalized:
         return False
 
-    if not any(pattern in normalized for pattern in SCREENSHOT_SUBJECT_PATTERNS):
+    if not any(pattern in normalized for pattern in SCREENSHOT_PATTERNS):
         return False
 
     if any(f" {word} " in f" {normalized} " for word in SCREENSHOT_META_WORDS):
@@ -255,62 +267,68 @@ def has_screenshot_intent(normalized: str) -> bool:
 
     return any(f" {word} " in f" {normalized} " for word in SCREENSHOT_ACTION_WORDS)
 
-
-ORGANIZE_DESKTOP_KEYWORDS = (
-    "toparla", "toparlama", "duzenle", "düzenle", "duzenleme", "düzenleme",
-    "duzenleyiver", "duzernle", "duzernleyiver", "duzenleyiverme",
-    "masaustu", "masaüstü", "masaustumu", "masaüstümü", "masaustunu", "masaüstünü",
-    "masautunu", "desktop",
-    "klasor", "klasör", "klasorlere", "klasörlere", "klasorlere ayir",
-    "dosyalari", "dosyaları", "türlerine", "turlerine", "gore", "göre",
-)
-
-
-def try_activate_mode(text: str) -> Optional[Dict[str, Any]]:
+#kullanicinin hangi modu acmak istedigini tesp't etmek icin bazende open_app ile karisabiliyor
+def activate_mode(text: str) -> Optional[Dict[str, Any]]:
     if not text or not text.strip():
         return None
+
     try:
         mods = user_modes.get_modes()
     except RuntimeError:
         return None
+
     if not mods:
         return None
+
     normalized = normalize_user_text(text)
     openkeyword = ("ac", "aç", "açı", "open", "baslat", "calistir")
+
     for kw in openkeyword:
         if kw in normalized:
             candidate = re.sub(rf"\b{re.escape(kw)}\b", " ", normalized).strip()
             candidate = re.sub(r"\s+", " ", candidate)
+
             if candidate:
                 mode = user_modes.get_mode_name(candidate)
+
                 if mode:
                     return mode
+
     mode = user_modes.get_mode_name(text.strip())
+
     if mode:
         return mode
+
     for m in mods:
         name = (m.get("name") or "").strip().lower()
         nameNorm = normalize_user_text(name)
+
         if nameNorm and (nameNorm in normalized or normalized in nameNorm):
             return m
+
     return None
 
 
-def has_organize_desktop_intent(normalized: str) -> bool:
+# masaustunu duzenlemek icin gerekn kw ler var mi diye bakar
+def organize_desktop_intent(normalized: str) -> bool:
     if not normalized:
         return False
+
     return any(kw in normalized for kw in ORGANIZE_DESKTOP_KEYWORDS)
 
-def has_capabilities(normalized: str) -> bool:
+# capabilities listesine bakar ustteki
+def capabilities(normalized: str) -> bool:
     if not normalized:
         return False
+
     return any(kw in normalized for kw in CAPABILITIES_KEYWORDS)
 
 
-def detect_local_intent(text: str) -> Optional[Dict[str, Any]]:
-    normalized = normalize_spoken_command(text)
 
-    if has_capabilities(normalized):
+def detect_local_intent(text: str) -> Optional[Dict[str, Any]]: #BURDA ISE LLM'e gitmeden local intent tespit ediyoruz daha hizli bu sekilde 
+    normalized = normalize_mic(text)  
+
+    if capabilities(normalized): # Kullanmici neler yapabiliyorsuin diye sorarsa hazir cevap
         return {
             "command": "none",
             "parameters": {},
@@ -327,7 +345,7 @@ def detect_local_intent(text: str) -> Optional[Dict[str, Any]]:
             "normalized": normalized,
         }
 
-    if has_screenshot_intent(normalized):
+    if screenshot_intent(normalized):
         return {
             "command": "screenshot",
             "parameters": {},
@@ -335,9 +353,11 @@ def detect_local_intent(text: str) -> Optional[Dict[str, Any]]:
             "normalized": normalized,
         }
 
-    modeMatch = try_activate_mode(text)
+    modeMatch = activate_mode(text)
+
     if modeMatch is not None:
         mode_name = modeMatch.get("name", "").strip()
+
         if mode_name:
             return {
                 "command": "activate_mode",
@@ -346,7 +366,7 @@ def detect_local_intent(text: str) -> Optional[Dict[str, Any]]:
                 "normalized": normalized,
             }
 
-    if has_organize_desktop_intent(normalized):
+    if organize_desktop_intent(normalized):
         return {
             "command": "organize_desktop",
             "parameters": {},
@@ -354,11 +374,13 @@ def detect_local_intent(text: str) -> Optional[Dict[str, Any]]:
             "normalized": normalized,
         }
 
-    if has_open_app_intent(normalized):
-        appName = extract_open_app_name(normalized)
-        appName = resolve_app_name(appName)
+    if open_app_intent(normalized):
+        appName = extract_open_app(normalized)
+        appName = resolve_app(appName)
+
         if not appName:
             return None
+
         if appName and safe_app_name(appName):
             return {
                 "command": "open_app",
@@ -370,8 +392,9 @@ def detect_local_intent(text: str) -> Optional[Dict[str, Any]]:
     tokens = [t for t in normalized.split() if t and t not in FILLER_WORDS]
     
     if len(tokens) <= 2:
-        resolved = resolve_app_name(" ".join(tokens))
+        resolved = resolve_app(" ".join(tokens))
         knownapps = set(APP_ALIASES.values())
+
         if resolved and resolved in knownapps and safe_app_name(resolved):
             return {
                 "command": "none",
