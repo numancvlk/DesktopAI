@@ -10,7 +10,6 @@ class Settings(BaseModel):
     ai_model: str  # modelin ismi
     timeout: float  # belirli bir saniye cevap gelmezse timeout atiyoruz
     memory_db_path: str  # sohbetin kullanici modlarinin vs kaydini tuttugumuz dosya yolu.
-    screenshot_save_dir: str  # ekran goruntulerini kaydedecegimiz yol. TODO kaldir bunu ayarlardan secelim
     stt_model: str  # STT modelinin ismi
     stt_language: str  # STT algilanmasi gereken dil
     stt_beam_size: int  # yuksek deger yavas ama daha dogru
@@ -36,7 +35,6 @@ class Settings(BaseModel):
         llmModel = os.getenv("LLM_MODEL")
         timeout = os.getenv("TIMEOUT")
         memoryDbPath = os.getenv("MEMORY_DB_PATH")
-        screenshotSaveDir = os.getenv("SCREENSHOT_SAVE_DIR")
         sttModel = os.getenv("STT_MODEL")
         sttLanguage = os.getenv("STT_LANGUAGE")
         sttBeamSize = os.getenv("STT_BEAM_SIZE")
@@ -58,10 +56,6 @@ class Settings(BaseModel):
 
         if llmModel is None or not llmModel.strip():
             raise RuntimeError("AI_MODEL eksik veya boş")
-
-        if not screenshotSaveDir or not screenshotSaveDir.strip():
-            raise RuntimeError("SCREENSHOT_SAVE_DIR eksik veya boş")
-        screenshotSaveDir = screenshotSaveDir.strip()
 
         try:
             timeout = float(timeout) if timeout is not None else 0.0
@@ -98,7 +92,6 @@ class Settings(BaseModel):
                 ai_model=llmModel.strip(),
                 timeout=timeout,
                 memory_db_path=memoryDbPath,
-                screenshot_save_dir=screenshotSaveDir,
                 stt_model=sttModel.strip(),
                 stt_language=sttLanguage.strip(),
                 stt_beam_size=sttBeamSizeInt,

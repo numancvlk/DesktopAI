@@ -273,7 +273,7 @@ def activate_mode(text: str) -> Optional[Dict[str, Any]]:
         return None
 
     try:
-        mods = user_modes.get_modes()
+        mods = user_modes.modes()
     except RuntimeError:
         return None
 
@@ -289,12 +289,12 @@ def activate_mode(text: str) -> Optional[Dict[str, Any]]:
             candidate = re.sub(r"\s+", " ", candidate)
 
             if candidate:
-                mode = user_modes.get_mode_name(candidate)
+                mode = user_modes.mode_name(candidate)
 
                 if mode:
                     return mode
 
-    mode = user_modes.get_mode_name(text.strip())
+    mode = user_modes.mode_name(text.strip())
 
     if mode:
         return mode

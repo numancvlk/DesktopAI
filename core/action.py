@@ -380,7 +380,7 @@ class SafeExecutor:
             if not isinstance(modeName, str) or not modeName.strip():
                 raise RuntimeError("Mod adi belirtilmedi")
 
-            mode = user_modes.get_mode_name(modeName.strip())
+            mode = user_modes.mode_name(modeName.strip())
             if mode is None:
                 raise RuntimeError(f"'{modeName.strip()}' modu bulunamadi")
 
@@ -390,7 +390,7 @@ class SafeExecutor:
             if not appNames and not linkUrls:
                 raise RuntimeError(f"'{mode.get('name', modeName)}' modunda acilacak uygulama veya site yok")
 
-            from .local_intents import resolve_app_name
+            from .local_intents import resolve_app
 
             skippedInvalidLinks = 0
             skippedDuplicateLinks = 0
@@ -417,7 +417,7 @@ class SafeExecutor:
             for app in appNames:
                 if not isinstance(app, str) or not safe_app_name(app):
                     continue
-                resolved = resolve_app_name(app.strip())
+                resolved = resolve_app(app.strip())
                 try:
                     open_start_menu(resolved)
                     openedApps += 1
