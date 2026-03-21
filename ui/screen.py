@@ -402,7 +402,7 @@ class ReminderPOPUP(QDialog):
 
         self.okButton = QPushButton("Tamam")
         self.okButton.setObjectName("ButtonPrimary")
-        self.snoozeButton = QPushButton("5 dakika ERTELE.")
+        self.snoozeButton = QPushButton("5 dakika ertele!")
 
         self.okButton.clicked.connect(self.accept)
         self.snoozeButton.clicked.connect(self.snooze)
@@ -414,15 +414,15 @@ class ReminderPOPUP(QDialog):
         containerLayout.addLayout(buttonRow)
         layout.addWidget(container)
 
-        self.snoozed = False 
+        self._snoozed = False 
 
     def snooze(self) -> None:
-        self.snoozed = True
+        self._snoozed = True
         self.accept()
 
     @property
     def snoozed(self) -> bool:
-        return self.snoozed
+        return self._snoozed
 
 
 # Mod olusturma duzenleme vs burda UI
