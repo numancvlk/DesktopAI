@@ -184,7 +184,7 @@ def split_text_chunks( #Ana kisim burasi tum islemler burda birlesiyor gibi dusu
             units.append(para)
         else:
             sentences = sentence_split(para)
-            curren #Metni son isaretlere yani noktalamaya gore boluyo istet
+            current: List[str] = [] #Metni son isaretlere yani noktalamaya gore boluyo istet
             currentLen = 0
 
             for sent in sentences:
