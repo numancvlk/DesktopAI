@@ -149,7 +149,7 @@ class LLMWorker(QThread): #LLM Worker UI kitlenmmesin diye llm cal local intent 
                 result = executor.execute(command, parameters)
 
                 if result and isinstance(result, str):
-                    displayResponse = f"{displayResponse} Dosya: {result}"
+                    displayResponse = result
 
             except RuntimeError as e:
                 displayResponse = str(e)

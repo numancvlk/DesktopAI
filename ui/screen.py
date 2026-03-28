@@ -318,7 +318,7 @@ class ReminderPOPUP(QDialog):
     def __init__(self, text: str, parent: QMainWindow | None = None) -> None:
 
         super().__init__(parent)
-        self.setWindowTitle("Hatirlatici")
+        self.setWindowTitle("Hatırlatıcı")
         self.setModal(True)
         self.setMinimumWidth(420)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)

@@ -428,7 +428,6 @@ class SafeExecutor:
             modeDisplayName = mode.get("name", modeName)
             return (
                 f"'{modeDisplayName}' modu calisti: {openedApps} uygulama ve {openedLinks} site acildi "
-                f"(tarayici: {resolvedBrowser if resolvedBrowser else '(belirtilmedi)'}). "
                 f"Atlanan site: {skippedInvalidLinks + skippedDuplicateLinks}, acilamayan site: {failedLinks}."
             )
 
