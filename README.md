@@ -1,6 +1,6 @@
 # Desktop AI
 
-[TR]
+## [TR]
 Bu projede, yerel olarak kullanıcının sisteminde çalışan ve gizliğe önem veren bir masaüstü yapay zeka asistanı geliştirdim.
 
 > ⚠️ Bu proje yerel bir LLM sunucusu ile çalışmak üzere tasarlanmıştır. API anahtarına gerek yoktur. Geliştirme sürecinde [Ollama](https://ollama.com/) kullandım. `BASE_URL` olarak Ollama'nın varsayılan adresi `http://localhost:11434` kullanılabilir.
@@ -20,6 +20,22 @@ Bu projede, yerel olarak kullanıcının sisteminde çalışan ve gizliğe önem
 | 📂 Kullanıcı Modları | Toplu şekilde eklenen uygulama ve linkleri açma  |
 | 📄 RAG | Yüklenen PDF üzerinden soru-cevap yapma |
 ---
+
+## Ekran Görüntüleri
+
+| Masaüstü Düzenleme | Uygulama Açma | 
+| :---------------------------------: | :------------------------: |
+| <img width="500" height="659" alt="masaustu" src="https://github.com/user-attachments/assets/8bd9eea9-4b93-40d2-8891-e16e9e96be6f" /> | <img width="500" height="662" alt="open_app" src="https://github.com/user-attachments/assets/078c3061-f06d-47d2-aa6d-2122eb93836f" />
+
+
+| Hatırlatıcı Kurma | Mod Çalıştırma | 
+| :---------------------------------: | :------------------------: |
+| <img width="500" height="656" alt="reminder" src="https://github.com/user-attachments/assets/c65636ea-4c62-4526-9050-9aed8112cf4b" /> | <img width="500" height="657" alt="mods" src="https://github.com/user-attachments/assets/a4ce5096-b43c-476d-a952-a3ecde82da03" />
+
+
+| RAG Soru-Cevap | Ayarlar | 
+| :---------------------------------: | :------------------------: |
+| <img width="500" height="655" alt="RAG" src="https://github.com/user-attachments/assets/ca7765e8-9f3d-47f8-9cab-ee4248338dc4" /> | <img width="500" height="535" alt="Ayarlar" src="https://github.com/user-attachments/assets/b9f5c6da-d0cb-4c18-8977-956bd1cd16b5" />
 
 ## Kurulum
 ```bash
@@ -84,8 +100,9 @@ python main.py
 
 ---
 
+### Bu proje, sadece portföy amacıyla ve ticari bir amaç gütmeden paylaşılmaktadır.
 
-[EN]
+## [EN]
 In this project, I developed a desktop AI assistant that runs locally on the user's system and prioritizes privacy.
 
 > ⚠️ This project is designed to run with a local LLM server. No API key needed. I used [Ollama](https://ollama.com/) during development. You can set `http://localhost:11434` as `BASE_URL` for Ollama's default address.
@@ -104,8 +121,23 @@ In this project, I developed a desktop AI assistant that runs locally on the use
 | 🖱️ Desktop Automation | Opening apps, taking screenshots, organizing desktop, setting reminders |
 | 📂 User Modes | Opening apps and links added in bulk |
 | 📄 RAG | Question-answering over uploaded PDFs |
-
 ---
+
+## Screenshots
+
+| Desktop Organization | Opening an application | 
+| :---------------------------------: | :------------------------: |
+| <img width="500" height="659" alt="masaustu" src="https://github.com/user-attachments/assets/8bd9eea9-4b93-40d2-8891-e16e9e96be6f" /> | <img width="500" height="662" alt="open_app" src="https://github.com/user-attachments/assets/078c3061-f06d-47d2-aa6d-2122eb93836f" />
+
+
+| Setting a reminder | Running a mode | 
+| :---------------------------------: | :------------------------: |
+| <img width="500" height="656" alt="reminder" src="https://github.com/user-attachments/assets/c65636ea-4c62-4526-9050-9aed8112cf4b" /> | <img width="500" height="657" alt="mods" src="https://github.com/user-attachments/assets/a4ce5096-b43c-476d-a952-a3ecde82da03" />
+
+
+| RAG Question Answering | Settings | 
+| :---------------------------------: | :------------------------: |
+| <img width="500" height="655" alt="RAG" src="https://github.com/user-attachments/assets/ca7765e8-9f3d-47f8-9cab-ee4248338dc4" /> | <img width="500" height="535" alt="Ayarlar" src="https://github.com/user-attachments/assets/b9f5c6da-d0cb-4c18-8977-956bd1cd16b5" />
 
 ## Setup
 ```bash
@@ -167,3 +199,5 @@ python main.py
 | 🖱️ Desktop Automation | PyAutoGUI · pyperclip |
 | 📄 PDF | pypdf |
 | ⚙️ Infrastructure | requests · pydantic · python-dotenv |
+
+### This project is shared solely for portfolio purposes and without any commercial intent.
