@@ -5,8 +5,6 @@ Bu projede, yerel olarak kullanıcının sisteminde çalışan ve gizliğe önem
 
 > ⚠️ Bu proje yerel bir LLM sunucusu ile çalışmak üzere tasarlanmıştır. API anahtarına gerek yoktur. Geliştirme sürecinde [Ollama](https://ollama.com/) kullandım. `BASE_URL` olarak Ollama'nın varsayılan adresi `http://localhost:11434` kullanılabilir.
 
-> Ollama üzerinden donanımınızın desteklediği herhangi bir model kullanılabilir. Geliştirme sürecinde 3 farklı model denendi ancak tüm modeller test edilmedi; sonuçlar modelden modele farklılık gösterebilir.
-
 ---
 
 ## 🖱️ Özellikler
@@ -106,8 +104,6 @@ python main.py
 In this project, I developed a desktop AI assistant that runs locally on the user's system and prioritizes privacy.
 
 > ⚠️ This project is designed to run with a local LLM server. No API key needed. I used [Ollama](https://ollama.com/) during development. You can set `http://localhost:11434` as `BASE_URL` for Ollama's default address.
-
-> Any model supported by your hardware can be used via Ollama. 3 different models were tested during development, though not all models were evaluated — results may vary depending on the model.
 
 ---
 
